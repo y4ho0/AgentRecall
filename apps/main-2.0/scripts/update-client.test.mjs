@@ -1806,13 +1806,19 @@ test("forces an uncached Electron reinstall after normal repair and cache recove
     findCachedArchiveImpl: async () => null,
     execFileImpl: async (command, args, options) => {
       if (command === process.execPath && args[0] === path.join(electronPath, "install.js")) {
-        installRuns.push(options.env.force_no_cache || "");
+        installRuns.push({
+          forceNoCache: options.env.force_no_cache || "",
+          mirror: options.env.ELECTRON_MIRROR || "",
+        });
       }
       return electronFixtureExec(command, args, options);
     },
   });
 
-  assert.deepEqual(installRuns, ["", "true"]);
+  assert.deepEqual(installRuns, [
+    { forceNoCache: "", mirror: "" },
+    { forceNoCache: "true", mirror: "https://npmmirror.com/mirrors/electron/" },
+  ]);
   assert.equal(await readFile(path.join(electronPath, "path.txt"), "utf8"), relativeExecutable);
   assert.equal(isElectronRuntimeReady(packagePath), true);
 });

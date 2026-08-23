@@ -59,6 +59,7 @@ test("V2 development startup repairs Electron without disabling TLS verification
   assert.equal(packageJson.scripts.predev, "node ../../scripts/ensure-electron-runtime.mjs .");
   assert.match(source, /"--proto-redir", "=https"/);
   assert.match(source, /checksums\[fileName\]/);
+  assert.match(source, /mkdtemp\(path\.join\(electronDirectory, "\.agent-recall-electron-"\)\)/);
   assert.doesNotMatch(source, /NODE_TLS_REJECT_UNAUTHORIZED/);
 });
 

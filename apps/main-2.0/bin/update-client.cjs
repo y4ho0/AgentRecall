@@ -29,6 +29,7 @@ const LATEST_UPDATE_MANIFEST_URL = `${LATEST_RELEASE_URL}/download/${STABLE_INST
 const UPDATE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const UPDATE_REQUEST_TIMEOUT_MS = 5_000;
 const DEFAULT_NPM_REGISTRY = "https://registry.npmjs.org/";
+const ELECTRON_FALLBACK_MIRROR = "https://npmmirror.com/mirrors/electron/";
 const TRANSIENT_REMOVE_ERROR_CODES = new Set(["EBUSY", "EMFILE", "ENFILE", "ENOTEMPTY", "EPERM"]);
 
 function packageRoot() {
@@ -1031,7 +1032,13 @@ async function ensureInstalledElectron(options = {}) {
   const repairViaInstallScript = async (forceNoCache = false) => {
     await run(nodePath, [installScript], {
       cwd: electronModulePath,
-      env: forceNoCache ? { ...nodeEnvironment, force_no_cache: "true" } : nodeEnvironment,
+      env: forceNoCache
+        ? {
+            ...nodeEnvironment,
+            force_no_cache: "true",
+            ELECTRON_MIRROR: nodeEnvironment.ELECTRON_MIRROR || ELECTRON_FALLBACK_MIRROR,
+          }
+        : nodeEnvironment,
       timeout,
       maxBuffer: 16 * 1024 * 1024,
     });
