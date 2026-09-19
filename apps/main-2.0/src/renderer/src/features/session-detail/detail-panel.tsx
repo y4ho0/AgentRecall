@@ -51,7 +51,7 @@ export type ConversationTimelineItem =
 export type ConversationRoleFilter = TurnMessageRoleFilter;
 
 const DETAIL_WIDTH_STORAGE_KEY = "agentrecall.session-detail-width";
-const DEFAULT_DETAIL_WIDTH = 720;
+const DEFAULT_DETAIL_WIDTH = 860;
 const MIN_DETAIL_WIDTH = 420;
 const MAX_DETAIL_WIDTH = 1200;
 const DETAIL_WIDTH_KEYBOARD_STEP = 16;
