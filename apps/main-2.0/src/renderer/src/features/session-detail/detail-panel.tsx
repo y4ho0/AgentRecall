@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ReactElement } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactElement } from "react";
 import { ArrowRightLeft, ChevronDown, ChevronUp, CloudUpload, Container, Copy, CornerUpLeft, Download, Edit3, Eye, EyeOff, FolderOpen, Laptop, Paperclip, Play, Search, Server, Sparkles, Star, Tag, Terminal as TerminalIcon, Trash2, X } from "lucide-react";
 import { formatMessageTime } from "../../../../core/format-session";
 import { traceCompactionSummary, traceDetailText, traceDurationLabel, tracePresentation } from "../../../../core/trace-presentation";
@@ -49,6 +49,31 @@ export type ConversationTimelineItem =
   | { kind: "trace"; key: string; timestampMs: number | null; order: number; event: SessionTraceEvent };
 
 export type ConversationRoleFilter = TurnMessageRoleFilter;
+
+const DETAIL_WIDTH_STORAGE_KEY = "agentrecall.session-detail-width";
+const DEFAULT_DETAIL_WIDTH = 720;
+const MIN_DETAIL_WIDTH = 420;
+const MAX_DETAIL_WIDTH = 1200;
+const DETAIL_WIDTH_KEYBOARD_STEP = 16;
+
+function detailWidthLimit(): number {
+  if (typeof window === "undefined") return MAX_DETAIL_WIDTH;
+  return Math.max(MIN_DETAIL_WIDTH, Math.min(MAX_DETAIL_WIDTH, window.innerWidth - 20));
+}
+
+function clampDetailWidth(width: number): number {
+  return Math.min(Math.max(width, MIN_DETAIL_WIDTH), detailWidthLimit());
+}
+
+function readStoredDetailWidth(): number {
+  if (typeof window === "undefined") return DEFAULT_DETAIL_WIDTH;
+  try {
+    const stored = Number(window.localStorage.getItem(DETAIL_WIDTH_STORAGE_KEY));
+    return Number.isFinite(stored) ? clampDetailWidth(stored) : DEFAULT_DETAIL_WIDTH;
+  } catch {
+    return DEFAULT_DETAIL_WIDTH;
+  }
+}
 
 const CONVERSATION_ROLE_FILTERS: ConversationRoleFilter[] = ["all", "user", "assistant"];
 
@@ -334,6 +359,15 @@ export function DetailPanel({
     ...(traceCount > 0 ? [l(`${traceCount} trace events`, `${traceCount} 条轨迹`)] : []),
   ];
   const bodyRef = useRef<HTMLDivElement>(null);
+  const detailRef = useRef<HTMLElement>(null);
+  const resizeRef = useRef<{
+    onMove: (event: PointerEvent) => void;
+    onStop: () => void;
+    previousUserSelect: string;
+    previousCursor: string;
+  } | null>(null);
+  const [detailWidth, setDetailWidth] = useState(readStoredDetailWidth);
+  const [resizing, setResizing] = useState(false);
   const exportMarkdownMenuRef = useRef<HTMLDivElement>(null);
   const pendingInitialScrollRef = useRef<string | null>(session.sessionKey);
   const [roleFilter, setRoleFilter] = useState<ConversationRoleFilter>("all");
@@ -376,6 +410,60 @@ export function DetailPanel({
   const canSyncSession = isSessionSource(session.source)
     && sessionSourceDescriptor(session.source).capabilities.sessionSync;
   const revealTitle = localOnlyDisabled ? remoteRevealTitle(language) : l(`Show in ${revealLabel}`, `在${revealLabel}中显示`);
+
+  const stopResizing = () => {
+    const activeResize = resizeRef.current;
+    if (!activeResize) return;
+    document.removeEventListener("pointermove", activeResize.onMove);
+    document.removeEventListener("pointerup", activeResize.onStop);
+    window.removeEventListener("blur", activeResize.onStop);
+    resizeRef.current = null;
+    setResizing(false);
+    document.body.style.userSelect = activeResize.previousUserSelect;
+    document.body.style.cursor = activeResize.previousCursor;
+  };
+
+  const startResizing = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const panelRight = detailRef.current?.getBoundingClientRect().right ?? window.innerWidth - 10;
+    const onMove = (moveEvent: PointerEvent) => {
+      setDetailWidth(clampDetailWidth(panelRight - moveEvent.clientX));
+    };
+    const onStop = () => stopResizing();
+    resizeRef.current = {
+      onMove,
+      onStop,
+      previousUserSelect: document.body.style.userSelect,
+      previousCursor: document.body.style.cursor,
+    };
+    setResizing(true);
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onStop, { once: true });
+    window.addEventListener("blur", onStop, { once: true });
+  };
+
+  const adjustDetailWidth = (delta: number) => {
+    setDetailWidth((current) => clampDetailWidth(current + delta));
+  };
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(DETAIL_WIDTH_STORAGE_KEY, String(Math.round(detailWidth)));
+    } catch {
+      // Width persistence is a convenience; private or unavailable storage should not affect resizing.
+    }
+  }, [detailWidth]);
+
+  useEffect(() => {
+    const handleViewportResize = () => setDetailWidth((current) => clampDetailWidth(current));
+    window.addEventListener("resize", handleViewportResize);
+    return () => {
+      window.removeEventListener("resize", handleViewportResize);
+      stopResizing();
+    };
+  }, []);
 
   const toggleTools = () => {
     setShowTools((current) => {
@@ -570,9 +658,38 @@ export function DetailPanel({
     return () => window.removeEventListener("keydown", onKey);
   }, [panelSearchOpen, turns]);
 
+  const detailStyle = { "--detail-panel-width": `${detailWidth}px` } as CSSProperties;
+  const detailWidthMax = detailWidthLimit();
+
   return (
-    <div className={`detail-backdrop ${backdropClassName}`.trim()} onClick={onClose}>
-      <aside className="detail" onClick={(event) => event.stopPropagation()}>
+    <div className={`detail-backdrop ${backdropClassName} ${resizing ? "is-resizing" : ""}`.trim()} onClick={onClose}>
+      <aside className="detail" ref={detailRef} style={detailStyle} onClick={(event) => event.stopPropagation()}>
+        <div
+          className="detail-resize-handle"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label={l("Resize conversation details panel", "调整对话详情面板宽度")}
+          aria-valuemin={MIN_DETAIL_WIDTH}
+          aria-valuemax={detailWidthMax}
+          aria-valuenow={Math.round(detailWidth)}
+          tabIndex={0}
+          onPointerDown={startResizing}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowLeft") {
+              event.preventDefault();
+              adjustDetailWidth(DETAIL_WIDTH_KEYBOARD_STEP);
+            } else if (event.key === "ArrowRight") {
+              event.preventDefault();
+              adjustDetailWidth(-DETAIL_WIDTH_KEYBOARD_STEP);
+            } else if (event.key === "Home") {
+              event.preventDefault();
+              setDetailWidth(MIN_DETAIL_WIDTH);
+            } else if (event.key === "End") {
+              event.preventDefault();
+              setDetailWidth(detailWidthMax);
+            }
+          }}
+        />
         <div className="detail-header">
           <div>
             <div className="detail-badges">

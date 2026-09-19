@@ -14,14 +14,20 @@
   overflow: hidden;
 }
 
+.detail-backdrop.is-resizing,
+.detail-backdrop.is-resizing * {
+  cursor: col-resize !important;
+}
+
 .remote-detail-backdrop {
   z-index: 90;
 }
 
 .detail {
+  position: relative;
   display: flex;
-  width: min(720px, calc(100vw - 276px));
-  min-width: 520px;
+  width: min(var(--detail-panel-width, 720px), calc(100vw - 20px));
+  min-width: 420px;
   height: 100%;
   min-height: 0;
   flex-direction: column;
@@ -30,6 +36,40 @@
   border-radius: var(--radius);
   background: var(--panel-bg);
   box-shadow: var(--shadow-panel);
+}
+
+.detail-resize-handle {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  bottom: 0;
+  left: -6px;
+  width: 12px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.detail-resize-handle::after {
+  position: absolute;
+  top: 16px;
+  bottom: 16px;
+  left: 5px;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--accent);
+  content: "";
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.detail-resize-handle:hover::after,
+.detail-resize-handle:focus-visible::after,
+.detail-backdrop.is-resizing .detail-resize-handle::after {
+  opacity: 1;
+}
+
+.detail-resize-handle:focus-visible {
+  outline: none;
 }
 
 .detail-header {
@@ -1402,6 +1442,15 @@
 }
 
 @media (max-width: 760px) {
+  .detail {
+    width: calc(100vw - 20px) !important;
+    min-width: 0;
+  }
+
+  .detail-resize-handle {
+    display: none;
+  }
+
   .turn-card-summary {
     grid-template-columns: 18px minmax(0, 1fr);
   }
