@@ -249,4 +249,64 @@ describe("DetailPanel Turn controls", () => {
     const buttonLabels = [...container.querySelectorAll("button")].map((button) => button.textContent);
     expect(buttonLabels.some((label) => label?.includes("Re-summarize"))).toBe(false);
   });
+
+  it("adjusts the panel width with the resize separator keyboard controls", async () => {
+    window.localStorage.removeItem("agentrecall.session-detail-width");
+    await act(async () => {
+      root.render(
+        <DetailPanel
+          session={session}
+          turns={null}
+          turnsLoading={false}
+          matchedTurnId={null}
+          onLoadTurn={async () => null}
+          messages={[]}
+          matchedContextMessages={[]}
+          matchedMessageIndex={null}
+          traceEvents={[]}
+          loading={false}
+          actionStatus={null}
+          query=""
+          liveState="closed"
+          language="en"
+          revealLabel="Explorer"
+          showItermAction={false}
+          messagePageSize={100}
+          olderMessageCount={0}
+          onClose={vi.fn()}
+          onShowMore={vi.fn()}
+          onRename={vi.fn()}
+          onAddTag={vi.fn()}
+          onRemoveTag={vi.fn()}
+          onFavorite={vi.fn()}
+          onSummarize={vi.fn()}
+          summarizing={false}
+          canResume={false}
+          canMigrate={false}
+          migrationTitle=""
+          onResume={vi.fn()}
+          onResumeIterm={vi.fn()}
+          onMigrate={vi.fn()}
+          onCopyResume={vi.fn()}
+          onCopyMarkdown={vi.fn()}
+          onExportMarkdown={vi.fn()}
+          onExportJson={vi.fn()}
+          onCopyPlain={vi.fn()}
+          onDelete={vi.fn()}
+          onReveal={vi.fn()}
+          sessionFamily={{ parent: null, children: [], truncated: false }}
+        />,
+      );
+    });
+
+    const separator = container.querySelector<HTMLElement>(".detail-resize-handle");
+    await act(async () => {
+      separator?.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
+    });
+    expect(separator?.getAttribute("aria-valuenow")).toBe("420");
+    await act(async () => {
+      separator?.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+    });
+    expect(separator?.getAttribute("aria-valuenow")).toBe("436");
+  });
 });

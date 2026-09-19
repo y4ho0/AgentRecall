@@ -189,12 +189,6 @@ npm run dev:v1
 </table>
 <!-- readme: collaborators -end -->
 
-## Star History
-
-<a href="https://www.star-history.com/?repos=zszz3%2FAgentRecall&type=date&legend=top-left">
-  <img src="./assets/star-history.svg" alt="AgentRecall Star History Chart" width="900" />
-</a>
-
 ## 开源协议
 
 本项目基于 [MIT License](./LICENSE) 开源。
