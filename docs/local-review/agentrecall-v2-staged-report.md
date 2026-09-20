@@ -39,6 +39,15 @@ Tests run with a dedicated temporary HOME and AGENT_RECALL_TEST_HOME. Native Ele
 
 4 real macOS bundle; 5 search semantic audit; 6 responsibility extraction; 7 incremental UI/IA; final regression.
 
+## Phase 4 — AUTOMATED PASS / MANUAL_CHECK_REQUIRED
+
+- Investigation: the wrapper launches the npm Electron binary; the dependency's Info.plist names both bundle and executable Electron. app.setName alone does not replace native bundle identity.
+- Changes: local-only packaging generator copies (never patches) the runtime, built app and installed dependency tree into mkdtemp; renames executable, sets product identity and distinct review bundle ID, reuses icon generator, ad-hoc signs and verifies the copy. A sibling CLI invokes the same executable. See [local review bundle guide](macos-review-bundle.md). No installation/update integration changed.
+- Tests: `npm run build` PASS, with pre-existing unresolved Source Serif 4 font warning (installed dependency missing) and no browser-externalization warning. `node --test scripts/package-local-macos.test.mjs scripts/install-macos-app.test.mjs` 9/9 PASS with isolated HOME and no inherited AGENT_RECALL_TEST_HOME override. First attempt with that override produced two test-fixture path failures; removing only that conflicting environment variable resolves them, not a product fix.
+- `node scripts/package-local-macos.mjs`: PASS, real bundle generated, ad-hoc signature verified. `node scripts/smoke-local-macos.mjs <temporary-app>`: PASS; real packaged AgentRecall executable, expected bundle/name/icon, renderer content, isolated paths, exit 0, PostgreSQL stopped. Initial smoke harness needed startup-context delay and failed with nested seatbelt sandboxes; final test disables only Chromium's nested sandbox while retaining the outer real-home deny/loopback-only sandbox. Failed test processes and temporary PostgreSQL were stopped explicitly; no installed app or real data touched.
+- Remaining: MANUAL DOCK LABEL CHECK REQUIRED; Finder double-click and icon appearance also manual. No claim of notarization/Gatekeeper/production packaging acceptance. Offline local bundle includes dev dependencies. Native runtime helpers retain Electron helper naming; the main app identity is AgentRecall. Team approval required for production dependency pruning/update design.
+- Data safety: real DB/data read or written NO; installed app replaced NO; dependency bundle modified NO; credentials used NO. Git: Phase 3 checkpoint d884898e; only packaging/icon export/scripts/package command and local documentation changed in Phase 4.
+
 ## Remote freeze
 
 Remote branches created: NO

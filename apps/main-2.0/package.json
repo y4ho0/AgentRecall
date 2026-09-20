@@ -48,6 +48,7 @@
     "test:workflow-transaction": "vitest run src/automation/engine/shared/workflow-v2 src/automation/engine/main/workflows/v2 src/automation/engine/main/workflows/workflow-runtime.test.ts src/automation/engine/main/hub/agent-hub-workflow-activation.test.ts src/automation/engine/main/hub/workflow/agent-hub-workflow-clone.test.ts src/automation/engine/main/hub/workflow/agent-hub-workflow-restore.test.ts src/automation/engine/main/hub/workflow/agent-hub-workflow-v2.test.ts",
     "test:watch": "vitest",
     "package:smoke": "npm run build && node scripts/package-smoke.mjs",
+    "package:local:macos": "npm run build && node scripts/package-local-macos.mjs",
     "release:preflight:openviking": "node scripts/verify-openviking-runtime-inputs.mjs",
     "release-note:check": "node scripts/release-notes.mjs check-range",
     "postinstall": "node bin/embedded-postgres-runtime.cjs",

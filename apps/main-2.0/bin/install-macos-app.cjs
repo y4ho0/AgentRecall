@@ -244,6 +244,7 @@ function uninstallMacosApp(options = {}) {
 
 module.exports = {
   BUNDLE_IDENTIFIER,
+  generateIcnsFile,
   findInstalledMacosApp,
   installMacosApp,
   readInstalledMacosAppVersion,
