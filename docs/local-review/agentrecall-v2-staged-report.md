@@ -26,9 +26,18 @@ Tests run with a dedicated temporary HOME and AGENT_RECALL_TEST_HOME. Native Ele
 - Real user data touched: NO. No real shell startup file changed. Risk: user login-shell configuration can itself fail; fallback runs when CLI cannot be resolved.
 - Files: bin/install-macos-app.cjs, scripts/install-macos-app.test.mjs, existing V2 release note, this report. Changes reviewed with git diff --check before local checkpoint.
 
+## Phase 3 — PASS
+
+- Investigation: V2 already isolates per-session indexing errors, but appended identical diagnostics each scan. V1 uses a different synchronous SQLite indexing path; this change is intentionally limited to V2's asynchronous PostgreSQL failure handler and diagnostics.
+- Changes: fingerprint includes source/session/path/revision/normalized error; serialized atomic JSONL updates preserve firstSeen, update lastSeen and count. One bounded rotation remains. Process-owned retry state uses 30 seconds exponential backoff capped at 15 minutes, bounded to 1,000 entries. File mtime/size changes, explicit Refresh Now, and a new application process bypass previous waits; success clears state. No persistent blacklist or database migration.
+- Tests: isolated `npm exec vitest run src/core/session-index-failures.test.ts src/core/indexer.test.ts src/main/session-index-failure-log.test.ts`: 42 tests PASS. `npm run typecheck`: PASS (625 production modules). After strengthening the oversized-turn regression, full indexer.test.ts rerun: 37 tests PASS; schema 55 fails on the full 3,250,033-byte fixture, schema 56 plus fresh process retry state succeeds with exact readback and tail searches three times.
+- Data safety: real data touched NO. Tests use synthetic sessions/PGlite and temporary log paths. Existing log fields retained; old/partial lines preserved. JSONL aggregation is serialized by the app-owned singleton; multi-process concurrent writers are not supported (the application owns a single-instance lock).
+- Remaining risk: mtime+size is the existing source freshness contract, not a content hash; source changes preserving both may not be detected. Deferred failures remain visible in index status. App restart intentionally resets backoff so repaired versions recover immediately.
+- Git: only phase-owned indexer/retry/logger/main wiring/tests plus this report/release note; diff checked before local checkpoint. Phase 2 checkpoint: 72f20bb8.
+
 ## Pending phases
 
-3 retry aggregation/backoff; 4 real macOS bundle; 5 search semantic audit; 6 responsibility extraction; 7 incremental UI/IA; final regression.
+4 real macOS bundle; 5 search semantic audit; 6 responsibility extraction; 7 incremental UI/IA; final regression.
 
 ## Remote freeze
 

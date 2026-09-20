@@ -35,6 +35,10 @@ describe("session index failure log", () => {
       const record = JSON.parse(fs.readFileSync(logger.logPath, "utf8").trim()) as Record<string, unknown>;
       expect(record).toEqual({
         timestamp: "2026-07-30T12:00:00.000Z",
+        fingerprint: expect.any(String),
+        count: 1,
+        firstSeen: "2026-07-30T12:00:00.000Z",
+        lastSeen: "2026-07-30T12:00:00.000Z",
         source: "codex-cli",
         sessionKey: "codex:one",
         filePath: "/tmp/codex:one.jsonl",
@@ -51,6 +55,27 @@ describe("session index failure log", () => {
       }
     } finally {
       fs.rmSync(userDataPath, { recursive: true, force: true });
+    }
+  });
+
+  it("aggregates concurrent repeated failures across logger restarts without losing firstSeen", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "agent-recall-index-log-"));
+    try {
+      let now = new Date("2026-09-20T00:00:00Z");
+      const entry = { ...diagnostic("codex:one"), revision: { fileMtimeMs: 1, fileSize: 10 } };
+      let logger = createSessionIndexFailureLogger(root, { now: () => now });
+      await logger.write(entry);
+      now = new Date("2026-09-20T00:01:00Z");
+      logger = createSessionIndexFailureLogger(root, { now: () => now });
+      await Promise.all(Array.from({ length: 20 }, () => logger.write(entry)));
+      const records = fs.readFileSync(logger.logPath, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+      expect(records).toHaveLength(1);
+      expect(records[0]).toMatchObject({ count: 21, firstSeen: "2026-09-20T00:00:00.000Z", lastSeen: "2026-09-20T00:01:00.000Z" });
+      await logger.write({ ...entry, revision: { fileMtimeMs: 2, fileSize: 10 } });
+      await logger.write({ ...entry, sessionKey: "codex:two" });
+      expect(fs.readFileSync(logger.logPath, "utf8").trim().split("\n")).toHaveLength(3);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
     }
   });
 
