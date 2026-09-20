@@ -1,0 +1,71 @@
+{
+  "status": "READY_FOR_TEAM_REVIEW",
+  "baseline": "ab5d24b8",
+  "runtimeSourceCheckpoint": "9d405dad",
+  "branch": "ui/v2-quality-pass",
+  "vitest": {
+    "final": { "files": 272, "passed": 2626, "failed": 0, "skipped": 0, "durationSeconds": 110.42 },
+    "report": "/tmp/agent-recall-ui-quality-oG8vHD/final-vitest-isolated.json",
+    "priorConcurrentRun": {
+      "passed": 2625,
+      "failed": 1,
+      "test": "indexer keeps failures visible during backoff, isolates other sessions and supports manual recovery",
+      "failureCause": "UNCONFIRMED: reporter retained STACK_TRACE_ERROR only",
+      "report": "/tmp/agent-recall-ui-quality-oG8vHD/final-vitest.json",
+      "targetedRerunPassed": true,
+      "sourceOrTimeoutChangedToObtainPass": false
+    }
+  },
+  "scriptTests": { "passed": 169, "failed": 0, "report": "/tmp/agent-recall-ui-quality-oG8vHD/script-tests.xml" },
+  "typecheck": "PASS",
+  "build": "PASS",
+  "existingOversizedTurnRegression": "PASS",
+  "macosSmoke": {
+    "status": "PASS",
+    "criticalPageLayoutCases": 36,
+    "uiQualityScreenshots": 44,
+    "languages": ["zh", "en"],
+    "sizes": [[1280, 800], [1440, 900], [1728, 1117], [2048, 1286], [1000, 800], [860, 800]],
+    "pages": ["workbench", "sessions", "providers"],
+    "otherPages": "7 additional pages and Settings captured at 1280x800",
+    "sessionTypographyPx": { "panel": 14, "parent": 13, "child": 12, "selectedChild": 12 },
+    "sessionChildHeightPx": 28,
+    "disclosureHeightsPx": [171, 0, 171],
+    "enterDurationMs": 170,
+    "reducedMotionDurationMs": 0,
+    "exitCode": 0,
+    "postgresStopped": true,
+    "isolation": "explicit directories + sandbox real-home deny + loopback-only",
+    "evidenceDirectory": "/private/var/folders/9y/2y32pc6d6f50h766fbn___dm0000gp/T/agent-recall-local-app-5iuLg4"
+  },
+  "manualApp": {
+    "path": "/private/var/folders/9y/2y32pc6d6f50h766fbn___dm0000gp/T/agent-recall-local-app-5iuLg4/AgentRecall.app",
+    "CFBundleName": "agent-recall-v2",
+    "CFBundleDisplayName": "agent-recall-v2",
+    "CFBundleIdentifier": "dev.zszz3.agent-recall-v2.local-review",
+    "CFBundleExecutable": "AgentRecall",
+    "isolationRoot": "/tmp/agent-recall-v2-ui-manual-TIUgTm",
+    "finderIsolationConfiguration": "new bundle LSEnvironment only; local ad-hoc signature verified",
+    "finderLaunchVerified": false,
+    "retained": true
+  },
+  "limits": [
+    "Pre-existing Source Serif 4 asset warning; system fallback available",
+    "Some dense graph/telemetry metadata remains 8-9px",
+    "Representative screenshots visually reviewed, not every saved image",
+    "Real credentials, real user data, populated external workflows and production migrations not exercised",
+    "Finder, Dock, Gatekeeper, physical reduced-motion setting and team acceptance remain manual"
+  ],
+  "safety": {
+    "realUserDatabaseTouched": false,
+    "installedAppOverwritten": false,
+    "dependencyElectronAppModified": false,
+    "remoteBranchesCreated": false,
+    "remotePushesPerformed": false,
+    "pullRequestsCreatedOrUpdated": false,
+    "issuesCreatedOrUpdated": false,
+    "releasesPublished": false,
+    "packagesPublished": false
+  },
+  "publication": "AWAITING_TEAM_APPROVAL; no remote operations authorized"
+}
