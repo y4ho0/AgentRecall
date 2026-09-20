@@ -117,6 +117,23 @@ describe("ProviderPage", () => {
     await act(async () => summaryTab.click());
   }
 
+  it("keeps a complete long model-probe error in its own field after loading", async () => {
+    const message = "Probe failed: " + "long-unbroken-diagnostic-".repeat(30);
+    let rejectProbe!: (error: Error) => void;
+    vi.mocked(window.sessionSearch.probeCodexModels).mockImplementation(() => new Promise((_resolve, reject) => { rejectProbe = reject; }));
+    const settings = structuredClone(defaultSettings);
+    settings.apiConfig = { ...settings.apiConfig, activeProvider: "custom", customProviderId: "custom",
+      customProviderName: "Custom Codex", customBaseUrl: "https://example.invalid/v1", customApiKey: "synthetic", customModel: "test" };
+    await mountProviderPage(settings);
+    const button = container.querySelector<HTMLButtonElement>(".codex-model-detect-button")!;
+    await act(async () => button.click());
+    expect(button.disabled).toBe(true);
+    await act(async () => rejectProbe(new Error(message)));
+    expect(button.disabled).toBe(false);
+    const error = button.closest(".settings-field")?.querySelector(".api-config-status.error");
+    expect(error?.textContent).toBe(message);
+  });
+
   async function selectSource(label: string): Promise<void> {
     const button = [...container.querySelectorAll<HTMLButtonElement>(".summary-provider-switch button")]
       .find((candidate) => candidate.querySelector("strong")?.textContent === label);

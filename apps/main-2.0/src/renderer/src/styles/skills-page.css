@@ -182,17 +182,21 @@
 
 .managed-skills-feedback {
   display: flex;
+  min-width: 0;
+  overflow-wrap: anywhere;
   flex: 0 0 auto;
   align-items: center;
   gap: 8px;
-  padding: 7px 14px;
+  padding: 8px 14px;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--panel-subtle);
   color: var(--text-dim);
-  font-size: 11.5px;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .managed-skills-feedback button {
+  flex-shrink: 0;
   margin-left: auto;
   color: inherit;
   text-decoration: underline;

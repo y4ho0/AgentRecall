@@ -44,7 +44,7 @@
 }
 
 .team-chat-page-head p {
-  margin-top: 2px;
+  margin-top: 0;
   color: var(--text-muted);
   font-size: 12px;
 }
@@ -1172,7 +1172,7 @@
   .team-chat-room-list { display: flex; overflow-x: auto; overflow-y: hidden; }
   .team-chat-room-item { flex: 0 0 150px; }
   .team-chat-room-delete { width: 34px; height: 34px; opacity: 1; }
-  .team-chat-page-head p { display: none; }
+  .team-chat-page-head p { display: block; }
   .team-chat-connection-chip { max-width: 180px; }
   .team-chat-database-controls > button { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .team-chat-transcript { padding-inline: 12px; }

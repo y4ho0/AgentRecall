@@ -7,8 +7,10 @@
   flex-direction: column;
   gap: 16px;
   overflow: hidden;
-  padding: 24px 28px 28px;
+  padding: 0 28px 28px;
 }
+
+.openviking-memory-page > .app-page-head { margin-inline: -28px; }
 
 .openviking-page-head,
 .openviking-page-actions,
@@ -169,6 +171,9 @@
 }
 
 .openviking-feedback {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
   justify-content: space-between;
   gap: 12px;
   min-height: 36px;
@@ -184,6 +189,7 @@
 }
 
 .openviking-feedback button {
+  flex-shrink: 0;
   display: grid;
   place-items: center;
   width: 24px;
@@ -2285,7 +2291,7 @@
 
 @media (max-width: 760px) {
   .openviking-memory-page {
-    padding: 18px;
+    padding: 0 28px 18px;
   }
 
   .openviking-memory-layout {
