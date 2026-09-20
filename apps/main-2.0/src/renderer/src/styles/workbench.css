@@ -60,6 +60,7 @@
   position: relative;
   z-index: 3;
   display: grid;
+  flex-shrink: 0;
   min-height: 142px;
   grid-template-columns: minmax(390px, 1.24fr) minmax(330px, 1.04fr) minmax(230px, .78fr);
   gap: 14px;
@@ -149,7 +150,7 @@
 .workbench-token-trend-head > span {
   flex: 0 0 auto;
   color: var(--text-faint);
-  font-size: 8px;
+  font-size: var(--text-xs);
   white-space: nowrap;
 }
 
@@ -247,7 +248,7 @@
   align-items: end;
   color: var(--text-faint);
   font-family: var(--mono);
-  font-size: 7.5px;
+  font-size: var(--text-xs);
   text-align: center;
 }
 
@@ -265,13 +266,13 @@
   padding-top: 3px;
   border-top: 1px solid var(--border-subtle);
   color: var(--text-faint);
-  font-size: 8px;
+  font-size: var(--text-xs);
 }
 
 .workbench-token-trend-foot b {
   color: var(--text-dim);
   font-family: var(--mono);
-  font-size: 8.5px;
+  font-size: var(--text-xs);
   font-weight: 650;
 }
 
@@ -281,7 +282,7 @@
   display: grid;
   place-items: center;
   color: var(--text-faint);
-  font-size: 8.5px;
+  font-size: var(--text-xs);
   pointer-events: none;
 }
 
@@ -296,7 +297,7 @@
   background: var(--panel-bg);
   box-shadow: var(--shadow-popover);
   color: var(--text-muted);
-  font-size: 8px;
+  font-size: var(--text-xs);
   pointer-events: none;
 }
 
@@ -313,7 +314,7 @@
 
 .workbench-token-trend-tooltip > div strong {
   color: var(--text-dim);
-  font-size: 8.5px;
+  font-size: var(--text-xs);
   font-weight: 650;
 }
 
@@ -465,7 +466,7 @@
   gap: 9px;
   margin-bottom: 6px;
   color: var(--text-faint);
-  font-size: 8.5px;
+  font-size: var(--text-xs);
   white-space: nowrap;
 }
 
@@ -516,7 +517,7 @@
   margin-top: 6px;
   color: var(--text-muted);
   font-family: var(--mono);
-  font-size: 8.5px;
+  font-size: var(--text-xs);
   white-space: nowrap;
 }
 
@@ -705,7 +706,7 @@
   align-items: baseline;
   justify-content: space-between;
   color: var(--text-muted);
-  font-size: 8.5px;
+  font-size: var(--text-xs);
 }
 
 .workbench-quota-window strong {
@@ -736,7 +737,7 @@
   min-width: 0;
   overflow: hidden;
   color: var(--text-faint);
-  font-size: 7.5px;
+  font-size: var(--text-xs);
   line-height: 9px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -791,6 +792,7 @@
   z-index: 1;
   display: flex;
   flex-wrap: wrap;
+  flex-shrink: 0;
   min-height: 0;
   gap: 14px;
 }
@@ -1043,7 +1045,7 @@
 
 .workbench-feature-list small {
   color: var(--text-faint);
-  font: 8.5px var(--mono);
+  font: var(--text-xs) var(--mono);
 }
 
 .workbench-feature-list svg {

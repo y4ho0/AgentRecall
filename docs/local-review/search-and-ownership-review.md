@@ -45,3 +45,21 @@ Deferred boundaries (not mechanical line-count targets):
 - Workflow executor: first codify a transition table for attempt/review/recovery/cancellation and committed side effects. Splitting the long execute body before that risks changing transaction/savepoint ordering. Existing helpers/coordinators already form useful boundaries; no state-machine rewrite performed here.
 
 These follow-ups are optional team-reviewed work, not hidden unfinished implementation in this branch.
+
+## UI / information architecture review
+
+Retained incremental changes:
+
+- HOME: Workbench; WORK: Sessions and Chat; AUTOMATION: Runtime, Workflow and Eval; KNOWLEDGE: Memory and Skills; CONNECTIONS: MCP and Provider. Settings stays fixed separately. Runtime remains the real page name (no invented Agents destination).
+- At >=1280px the navigation is 200px wide with text/group labels. Below that it retains the existing 84px labeled compact rail, instead of introducing an untested 64px icon-only mode. Group semantics and all ten page buttons remain available to assistive technology; active page has aria-current.
+- Workbench DOM order now puts task cards ahead of usage/quota/trend. New default card order puts sessions/workflows/chat first; existing custom card order is normalized/preserved, not reset. Failures still use their existing visible card feedback. This does not add a new interventions feed or fabricate active work.
+- Reuse existing --text-xs (11px) and --space-* tokens. Replace Workbench's 7.5/8/8.5px text, without a global typography or theme redesign. Explicit non-shrinking task/usage regions prevent overlap when the page scrolls.
+
+Considered but deferred:
+
+- Sessions already separates filters/results and detail ownership. A permanently visible third column needs selection, keyboard focus, detail loading and narrow-window usability acceptance; no new state duplication introduced.
+- Workflow already has planning/review/generation behavior and dedicated tests. Do not replace it with a second wizard or show a new canvas on every creation without observing current flows.
+- Eval exposes datasets/evaluators/plans/runs; Cases live with datasets and results with runs. A clearer progressive explanatory path is reasonable, but not a model/data migration.
+- Memory has workspace/memory/detail/evidence controls and a separate runtime-monitor view. Preserve that separation; do not elevate diagnostics over retained knowledge.
+
+GUI evidence here is an isolated empty/synthetic workspace. It does not prove real long-session, populated workflow, provider-authentication, or business usability acceptance.

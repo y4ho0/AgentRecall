@@ -66,8 +66,8 @@ const WORKBENCH_CARD_ORDER_STORAGE_KEY = "agent-recall.workbench-card-order.v2";
 export const DEFAULT_WORKBENCH_CARD_ORDER = [
   "sessions",
   "workflows",
-  "memories",
   "chat",
+  "memories",
   "runtimes",
   "mcp",
   "skills",
@@ -320,7 +320,7 @@ export function WorkbenchPage({
       <header className="app-page-head workbench-page-head">
         <div>
           <h2>{l("Workbench", "工作台")}</h2>
-          <p>One for all</p>
+          <p>{l("Continue your recent work, then check usage.", "继续最近的工作，再查看用量。")}</p>
         </div>
         <button
           type="button"
@@ -337,117 +337,7 @@ export function WorkbenchPage({
         </button>
       </header>
       <div className="workbench-page-content">
-        <section className="workbench-overview" aria-label={l("Agent usage overview", "Agent 使用总览")}>
-        <div className="workbench-usage">
-          <div className="workbench-usage-head">
-            <strong>{l("Usage", "用量")}</strong>
-            <div className="workbench-usage-actions">
-              <select
-                className="workbench-period-select"
-                value={statsOrigin}
-                onChange={(event) => onStatsOriginChange(event.currentTarget.value as SessionOriginFilter)}
-                aria-label={l("Session origin", "会话来源")}
-              >
-                {ORIGINS.map((origin) => (
-                  <option key={origin} value={origin}>
-                    {origin === "ordinary"
-                      ? l("Ordinary", "普通")
-                      : origin === "agentrecall"
-                        ? "AgentRecall"
-                        : l("All", "全部")}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="workbench-period-select"
-                value={statsPeriod}
-                onChange={(event) => onStatsPeriodChange(event.currentTarget.value as SessionStatsPeriod)}
-                aria-label={l("Usage period", "用量周期")}
-              >
-                {PERIODS.map((period) => (
-                  <option key={period} value={period}>{statsPeriodLabel(period, language)}</option>
-                ))}
-              </select>
-              <button
-                className="workbench-icon-button"
-                onClick={onRefreshStats}
-                disabled={statsRefreshing}
-                aria-label={l("Refresh usage", "刷新用量")}
-              >
-                <RefreshCw size={14} />
-              </button>
-            </div>
-          </div>
-          <div className="usage-metrics">
-            <UsageMetric value={formatCompactNumber(stats.total.sessionCount)} label={l("Sessions", "会话")} />
-            <UsageMetric value={formatCompactNumber(stats.total.messageCount)} label={l("Messages", "消息")} />
-            <UsageMetric value={formatTokenCount(stats.total.totalTokens)} label="Token" />
-            <UsageMetric value={cacheRate == null ? "—" : `${cacheRate}%`} label={l("Cache rate", "缓存率")} />
-          </div>
-          <div className="workbench-usage-detail">
-            <div className="workbench-token-composition">
-              <div className="workbench-detail-title">
-                <strong>{l("Token composition", "Token 构成")}</strong>
-                <span>{cacheRate == null
-                  ? l("No input token data", "暂无输入 Token 数据")
-                  : l(`Cache hits cover ${cacheRate}% of input`, `缓存命中占输入 ${cacheRate}%`)}</span>
-              </div>
-              <div className="workbench-token-track" aria-hidden="true">
-                {tokenParts.map((part) => (
-                  <i
-                    key={part.key}
-                    className={part.key}
-                    style={{ width: tokenPartTotal > 0 ? `${(Math.max(0, part.value) / tokenPartTotal) * 100}%` : "0%" } as CSSProperties}
-                  />
-                ))}
-              </div>
-              <div className="workbench-token-legend">
-                {tokenParts.map((part) => <span key={part.key} className={part.key}><i />{part.label} {formatTokenCount(part.value)}</span>)}
-              </div>
-            </div>
-            <div className="workbench-source-usage" aria-label={l("Token usage by Agent", "按 Agent 查看 Token 用量")}>
-              {sourceRows.length > 0 ? sourceRows.map((row) => (
-                <div key={row.key} className="workbench-source-row" data-source={row.key}>
-                  <span><i />{row.label}</span><strong>{formatTokenCount(row.totalTokens)}</strong>
-                </div>
-              )) : <span className="workbench-source-empty">{l("No source data", "暂无来源数据")}</span>}
-            </div>
-          </div>
-          {statsFeedback ? <p className={`workbench-feedback ${statsFeedback.kind}`}>{statsFeedback.message}</p> : null}
-        </div>
-
-        <section className="workbench-quota-card" aria-label={l("Model quotas", "模型额度")}>
-          <div className="workbench-quota-card-head">
-            <strong>{l("Model quotas", "模型额度")}</strong>
-            <button className="workbench-icon-button" onClick={onRefreshQuotas} disabled={quotaLoading} aria-label={l("Refresh model quotas", "刷新模型额度")}>
-              <RefreshCw size={14} />
-            </button>
-          </div>
-          <div className="workbench-quota-pair" data-count={visibleQuotaProviders.length}>
-            {visibleQuotaProviders.map((provider) => (
-              <WorkbenchQuota
-                key={provider}
-                card={quotas.providers.find((item) => item.provider === provider) ?? null}
-                provider={provider}
-                loading={quotaLoading}
-                language={language}
-                onOpenSettings={onOpenSettings}
-              />
-            ))}
-            {visibleQuotaProviders.length === 0 ? (
-              <div className="workbench-quota-hidden">
-                <span>{l("Usage limits are hidden in settings.", "额度已在设置中隐藏。")}</span>
-                <button onClick={onOpenSettings}>{l("Open settings", "打开设置")}</button>
-              </div>
-            ) : null}
-          </div>
-          {quotaFeedback ? <p className={`workbench-feedback quota ${quotaFeedback.kind}`}>{quotaFeedback.message}</p> : null}
-        </section>
-
-        <TokenTrendChart points={stats.dailyTokenUsage} language={language} onSelectDay={onSelectTrendDay} />
-        </section>
-
-        <div className={`workbench-primary-grid ${layoutEditing ? "is-editing" : ""}`}>
+        <div className={`workbench-primary-grid ${layoutEditing ? "is-editing" : ""}`} role="region" aria-label={l("Continue work", "继续工作")}>
         <article
           className={`workbench-card-slot is-secondary ${draggingCard === "sessions" ? "is-dragging" : ""}`}
           {...layoutCardProps("sessions")}
@@ -713,6 +603,117 @@ export function WorkbenchPage({
           />
         </article>
         </div>
+
+        <section className="workbench-overview" aria-label={l("Agent usage overview", "Agent 使用总览")}>
+        <div className="workbench-usage">
+          <div className="workbench-usage-head">
+            <strong>{l("Usage", "用量")}</strong>
+            <div className="workbench-usage-actions">
+              <select
+                className="workbench-period-select"
+                value={statsOrigin}
+                onChange={(event) => onStatsOriginChange(event.currentTarget.value as SessionOriginFilter)}
+                aria-label={l("Session origin", "会话来源")}
+              >
+                {ORIGINS.map((origin) => (
+                  <option key={origin} value={origin}>
+                    {origin === "ordinary"
+                      ? l("Ordinary", "普通")
+                      : origin === "agentrecall"
+                        ? "AgentRecall"
+                        : l("All", "全部")}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="workbench-period-select"
+                value={statsPeriod}
+                onChange={(event) => onStatsPeriodChange(event.currentTarget.value as SessionStatsPeriod)}
+                aria-label={l("Usage period", "用量周期")}
+              >
+                {PERIODS.map((period) => (
+                  <option key={period} value={period}>{statsPeriodLabel(period, language)}</option>
+                ))}
+              </select>
+              <button
+                className="workbench-icon-button"
+                onClick={onRefreshStats}
+                disabled={statsRefreshing}
+                aria-label={l("Refresh usage", "刷新用量")}
+              >
+                <RefreshCw size={14} />
+              </button>
+            </div>
+          </div>
+          <div className="usage-metrics">
+            <UsageMetric value={formatCompactNumber(stats.total.sessionCount)} label={l("Sessions", "会话")} />
+            <UsageMetric value={formatCompactNumber(stats.total.messageCount)} label={l("Messages", "消息")} />
+            <UsageMetric value={formatTokenCount(stats.total.totalTokens)} label="Token" />
+            <UsageMetric value={cacheRate == null ? "—" : `${cacheRate}%`} label={l("Cache rate", "缓存率")} />
+          </div>
+          <div className="workbench-usage-detail">
+            <div className="workbench-token-composition">
+              <div className="workbench-detail-title">
+                <strong>{l("Token composition", "Token 构成")}</strong>
+                <span>{cacheRate == null
+                  ? l("No input token data", "暂无输入 Token 数据")
+                  : l(`Cache hits cover ${cacheRate}% of input`, `缓存命中占输入 ${cacheRate}%`)}</span>
+              </div>
+              <div className="workbench-token-track" aria-hidden="true">
+                {tokenParts.map((part) => (
+                  <i
+                    key={part.key}
+                    className={part.key}
+                    style={{ width: tokenPartTotal > 0 ? `${(Math.max(0, part.value) / tokenPartTotal) * 100}%` : "0%" } as CSSProperties}
+                  />
+                ))}
+              </div>
+              <div className="workbench-token-legend">
+                {tokenParts.map((part) => <span key={part.key} className={part.key}><i />{part.label} {formatTokenCount(part.value)}</span>)}
+              </div>
+            </div>
+            <div className="workbench-source-usage" aria-label={l("Token usage by Agent", "按 Agent 查看 Token 用量")}>
+              {sourceRows.length > 0 ? sourceRows.map((row) => (
+                <div key={row.key} className="workbench-source-row" data-source={row.key}>
+                  <span><i />{row.label}</span><strong>{formatTokenCount(row.totalTokens)}</strong>
+                </div>
+              )) : <span className="workbench-source-empty">{l("No source data", "暂无来源数据")}</span>}
+            </div>
+          </div>
+          {statsFeedback ? <p className={`workbench-feedback ${statsFeedback.kind}`}>{statsFeedback.message}</p> : null}
+        </div>
+
+        <section className="workbench-quota-card" aria-label={l("Model quotas", "模型额度")}>
+          <div className="workbench-quota-card-head">
+            <strong>{l("Model quotas", "模型额度")}</strong>
+            <button className="workbench-icon-button" onClick={onRefreshQuotas} disabled={quotaLoading} aria-label={l("Refresh model quotas", "刷新模型额度")}>
+              <RefreshCw size={14} />
+            </button>
+          </div>
+          <div className="workbench-quota-pair" data-count={visibleQuotaProviders.length}>
+            {visibleQuotaProviders.map((provider) => (
+              <WorkbenchQuota
+                key={provider}
+                card={quotas.providers.find((item) => item.provider === provider) ?? null}
+                provider={provider}
+                loading={quotaLoading}
+                language={language}
+                onOpenSettings={onOpenSettings}
+              />
+            ))}
+            {visibleQuotaProviders.length === 0 ? (
+              <div className="workbench-quota-hidden">
+                <span>{l("Usage limits are hidden in settings.", "额度已在设置中隐藏。")}</span>
+                <button onClick={onOpenSettings}>{l("Open settings", "打开设置")}</button>
+              </div>
+            ) : null}
+          </div>
+          {quotaFeedback ? <p className={`workbench-feedback quota ${quotaFeedback.kind}`}>{quotaFeedback.message}</p> : null}
+        </section>
+
+        <TokenTrendChart points={stats.dailyTokenUsage} language={language} onSelectDay={onSelectTrendDay} />
+        </section>
+
       </div>
     </div>
   );

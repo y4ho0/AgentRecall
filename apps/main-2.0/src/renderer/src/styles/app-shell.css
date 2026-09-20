@@ -1,14 +1,15 @@
 .app {
-  grid-template-columns: 84px minmax(0, 1fr);
+  --app-navigation-width: 84px;
+  grid-template-columns: var(--app-navigation-width) minmax(0, 1fr);
 }
 
 .app::before {
-  width: 84px;
+  width: var(--app-navigation-width);
   height: 40px;
 }
 
 .app::after {
-  left: 84px;
+  left: var(--app-navigation-width);
 }
 
 .app-navigation {
@@ -89,6 +90,41 @@
   display: none;
 }
 
+.app-navigation-group {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.app-navigation-group + .app-navigation-group {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.app-navigation-group > p {
+  display: none;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+@media (min-width: 1280px) {
+  .app { --app-navigation-width: 200px; }
+
+  .app-navigation-brand,
+  .app-navigation nav button,
+  .app-navigation-settings {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--space-3);
+    min-height: 38px;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-base);
+  }
+
+  .app-navigation-brand strong { font-size: var(--text-base); }
+  .app-navigation-group > p { display: block; padding: var(--space-1) var(--space-3); }
+}
+
 .app-navigation nav button:hover,
 .app-navigation-settings:hover {
   background: var(--panel-hover);
@@ -149,7 +185,7 @@
 
 .app[data-platform="darwin"] .titlebar-drag {
   right: 0;
-  left: 84px;
+  left: var(--app-navigation-width);
   height: 8px;
 }
 
@@ -158,7 +194,7 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 84px;
+  width: var(--app-navigation-width);
   height: 40px;
   -webkit-app-region: drag;
 }

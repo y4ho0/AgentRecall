@@ -35,10 +35,6 @@ Tests run with a dedicated temporary HOME and AGENT_RECALL_TEST_HOME. Native Ele
 - Remaining risk: mtime+size is the existing source freshness contract, not a content hash; source changes preserving both may not be detected. Deferred failures remain visible in index status. App restart intentionally resets backoff so repaired versions recover immediately.
 - Git: only phase-owned indexer/retry/logger/main wiring/tests plus this report/release note; diff checked before local checkpoint. Phase 2 checkpoint: 72f20bb8.
 
-## Pending phases
-
-4 real macOS bundle; 5 search semantic audit; 6 responsibility extraction; 7 incremental UI/IA; final regression.
-
 ## Phase 4 — AUTOMATED PASS / MANUAL_CHECK_REQUIRED
 
 - Investigation: the wrapper launches the npm Electron binary; the dependency's Info.plist names both bundle and executable Electron. app.setName alone does not replace native bundle identity.
@@ -55,14 +51,22 @@ Tests run with a dedicated temporary HOME and AGENT_RECALL_TEST_HOME. Native Ele
 - Final focused command: `npm exec vitest run src/core/session-search-query.test.ts src/core/mcp-server.test.ts src/core/postgres/session-search.test.ts src/core/indexer.test.ts`: 4 files, 60 tests PASS, including full oversized fixture and UI/MCP tail search.
 - Data safety: real data touched NO. Risk: source checkout MCP search now needs its generated entry (normal package builds include it). Full semantic parity is NOT CLAIMED; visibility/matching/ranking decisions remain AWAITING_TEAM_APPROVAL. Phase 4 checkpoint 9465048a. Git diff checked before local checkpoint.
 
-## Remote freeze
-
 ## Phase 6 — PASS (one responsibility extracted)
 
 - Recounted all four requested files and inspected import/state/IPC ownership; see the ownership review. No mechanical splitting of App, AgentHub or workflow transactions.
 - Native menu ownership extracted from main into application-menu.ts. Main remains the owner of window commands and index refresh; no new state, IPC, persistence or timers introduced.
 - Before extraction: original menu characterization 3/3 PASS. After extraction: application-menu + interface-zoom, 4/4 PASS. `npm run build` PASS, including typecheck/dead-source check (627 production modules); existing missing-font warning unchanged.
 - Data safety: real data touched NO. Risk: OS-visible menu still warrants manual UI acceptance; exact roles, key accelerators and non-mac behavior are covered with mocked Electron. Phase 5 checkpoint 926358a4. Git diff checked; only the menu boundary/test and local review documentation changed.
+
+## Remote freeze
+
+## Phase 7 — PASS (incremental UI only)
+
+- Investigation/proposals: search-and-ownership-review.md covers each requested product area. Retained grouped navigation, task-first Workbench and existing typography/spacing token reuse; no new data model, permission changes or broad feature redesign.
+- Existing custom card ordering preserved; only default order places Chat before Memory. Statistics/quota/trend remain available below task cards. Navigation is 200px on wide windows, existing 84px labeled compact rail otherwise; all ten destinations and fixed Settings retained.
+- `NODE_OPTIONS=--no-experimental-webstorage npm exec vitest run src/renderer/src/components/app-navigation.test.tsx src/renderer/src/features/workbench/workbench-page.test.tsx src/renderer/src/App.workflow-workbench.test.tsx src/renderer/src/App.session-open.test.tsx`: 16/16 PASS. Build/typecheck PASS. Node 25 native webstorage is disabled only for these test processes, not globally.
+- Repackaged current source and ran isolated real-app smoke at 1440x900 and 1000x900: PASS, ten destinations, expected 200/84px rail, zero horizontal overflow, task cards before statistics, exit 0 and PostgreSQL stopped. Screenshot inspection caught flex compression/overlap before checkpoint; fixed with non-shrinking sections and added geometry assertions. Final screenshot/geometry has a 22px gap instead of overlap.
+- Data safety: real data touched NO. Remaining: populated-workspace usability, Dock and Finder manual checks; missing Source Serif font installation remains a known pre-existing build warning. Phase 6 checkpoint c36ba241. No production code from an unsuccessful attempt retained.
 
 ## Remote freeze
 

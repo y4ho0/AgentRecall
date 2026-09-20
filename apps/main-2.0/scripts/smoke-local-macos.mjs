@@ -96,7 +96,38 @@ try {
   assert.equal(plist.CFBundleDisplayName, "agent-recall-v2");
   assert.equal(plist.CFBundleIdentifier, "dev.zszz3.agent-recall-v2.local-review");
   await fs.access(path.join(appPath, "Contents/Resources", plist.CFBundleIconFile));
-  const report = { status: "PASS", state, isolation: "explicit paths + sandbox real-home deny + loopback-only", manual: ["Dock label", "Finder double-click"], testRoot };
+  const layouts = [];
+  for (const width of [1440, 1000]) {
+    await evaluate(`${electron}.BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/renderer/index.html')).setContentSize(${width}, 900); undefined`);
+    await delay(300);
+    const layout = await evaluate(`(async () => {
+      const window = ${electron}.BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/renderer/index.html'));
+      return window.webContents.executeJavaScript(${JSON.stringify(`(() => {
+        const nav = document.querySelector('.app-navigation');
+        const content = document.querySelector('.workbench-page-content');
+        const primary = document.querySelector('.workbench-primary-grid');
+        const overview = document.querySelector('.workbench-overview');
+        return { width: innerWidth, navigationWidth: nav.getBoundingClientRect().width,
+          pageCount: nav.querySelectorAll('nav button[data-page]').length,
+          taskFirst: Boolean(primary.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING),
+          cardsBottom: Math.max(...[...primary.children].map(card => card.getBoundingClientRect().bottom)),
+          usageTop: overview.getBoundingClientRect().top,
+          overflow: content.scrollWidth - content.clientWidth };
+      })()`)});
+    })()`);
+    assert.equal(layout.pageCount, 10);
+    assert.equal(layout.taskFirst, true);
+    assert.ok(layout.cardsBottom <= layout.usageTop, `Workbench cards overlap usage: ${JSON.stringify(layout)}`);
+    assert.equal(layout.navigationWidth, width >= 1280 ? 200 : 84);
+    assert.ok(layout.overflow <= 1, `Workbench overflows: ${JSON.stringify(layout)}`);
+    layouts.push(layout);
+    const png = await evaluate(`(async () => {
+      const window = ${electron}.BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/renderer/index.html'));
+      return (await window.webContents.capturePage()).toPNG().toString('base64');
+    })()`);
+    await fs.writeFile(path.join(outputRoot, `workbench-${width}.png`), Buffer.from(png, "base64"));
+  }
+  const report = { status: "PASS", state, layouts, isolation: "explicit paths + sandbox real-home deny + loopback-only", manual: ["Dock label", "Finder double-click"], testRoot };
   quitRequested = true;
   await evaluate(`${electron}.app.quit(); undefined`);
   socket.close();
