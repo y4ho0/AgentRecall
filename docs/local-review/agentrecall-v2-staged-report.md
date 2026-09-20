@@ -50,6 +50,15 @@ Tests run with a dedicated temporary HOME and AGENT_RECALL_TEST_HOME. Native Ele
 
 ## Remote freeze
 
+## Phase 5 — PASS (bounded extraction; semantic convergence proposed)
+
+- Investigation and comparison matrix: [search and ownership review](search-and-ownership-review.md). SQL, filtering and scoring differ materially; changing them all would silently change MCP's public contract. Shared only equivalent parsing/literal escaping; no schema/ranking/filter changes. V1 SQLite remains independent.
+- Characterization before extraction: six cases PASS. After extraction, `npm run build` (including typecheck) PASS; initial new entry changed esbuild's inferred output directory and exposed seven missing-module test failures. Fixed the owning generator with explicit flat entryNames, preserving all existing MCP entry filenames; regenerated bundles.
+- Final focused command: `npm exec vitest run src/core/session-search-query.test.ts src/core/mcp-server.test.ts src/core/postgres/session-search.test.ts src/core/indexer.test.ts`: 4 files, 60 tests PASS, including full oversized fixture and UI/MCP tail search.
+- Data safety: real data touched NO. Risk: source checkout MCP search now needs its generated entry (normal package builds include it). Full semantic parity is NOT CLAIMED; visibility/matching/ranking decisions remain AWAITING_TEAM_APPROVAL. Phase 4 checkpoint 9465048a. Git diff checked before local checkpoint.
+
+## Remote freeze
+
 Remote branches created: NO
 Remote pushes performed: NO
 Pull Requests created/updated: NO
