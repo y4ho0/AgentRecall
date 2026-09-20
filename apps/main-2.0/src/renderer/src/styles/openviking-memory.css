@@ -36,11 +36,13 @@
 }
 
 .openviking-page-head {
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 18px;
 }
 
 .openviking-page-actions {
+  flex-wrap: wrap;
   gap: 8px;
   -webkit-app-region: no-drag;
 }
@@ -306,7 +308,7 @@
   border-radius: 999px;
   background: var(--panel-bg);
   color: var(--text-muted);
-  font-size: 9.5px;
+  font-size: var(--text-xs);
   font-style: normal;
   font-weight: 650;
 }
@@ -957,7 +959,7 @@
   border-radius: 999px;
   background: var(--panel-bg);
   color: var(--text-muted);
-  font-size: 9.5px;
+  font-size: var(--text-xs);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -1130,7 +1132,7 @@
   border-radius: 999px;
   background: var(--panel-subtle);
   color: var(--text-muted);
-  font-size: 9.5px;
+  font-size: var(--text-xs);
   font-weight: 720;
   line-height: 1.2;
   white-space: nowrap;
@@ -1276,7 +1278,7 @@
 
 .openviking-runtime-facts small {
   color: var(--text-faint);
-  font-size: 9.5px;
+  font-size: var(--text-xs);
   font-weight: 650;
   text-transform: uppercase;
 }
@@ -1377,7 +1379,7 @@
 
 .openviking-directory-summary small {
   color: var(--text-faint);
-  font-size: 9.5px;
+  font-size: var(--text-xs);
 }
 
 .openviking-directory-icon {
@@ -1404,7 +1406,7 @@
   padding: 8px 11px;
   border-top: 1px solid var(--border-subtle);
   color: var(--text-faint);
-  font-size: 9.5px;
+  font-size: var(--text-xs);
   line-height: 1.5;
 }
 

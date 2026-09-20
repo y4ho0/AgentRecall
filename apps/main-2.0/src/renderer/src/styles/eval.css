@@ -16,6 +16,8 @@
  */
 .eval-tabs {
   display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
   align-items: center;
   gap: 2px;
   align-self: flex-start;

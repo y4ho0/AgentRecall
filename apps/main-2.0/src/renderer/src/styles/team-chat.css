@@ -22,6 +22,7 @@
 
 .team-chat-database-controls {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
@@ -34,7 +35,7 @@
   border-color: var(--border-subtle);
   color: var(--text-muted);
   background: var(--panel-subtle);
-  font-size: 10px;
+  font-size: var(--text-sm);
 }
 
 .team-chat-database-controls > button:hover {
@@ -64,6 +65,7 @@
 }
 
 .team-chat-connection-chip span {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -360,7 +362,7 @@
   max-width: 520px;
   color: var(--text-faint);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: var(--text-xs);
 }
 
 .team-chat-transcript {
@@ -424,7 +426,7 @@
   color: var(--text-faint);
   background: var(--panel-subtle);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: var(--text-xs);
   line-height: 1.35;
 }
 
@@ -615,7 +617,7 @@
   display: block;
   margin: 4px 2px 0;
   color: var(--text-faint);
-  font-size: 9px;
+  font-size: var(--text-xs);
 }
 
 .team-chat-feedback {
@@ -663,7 +665,7 @@
 .team-chat-member-list strong,
 .team-chat-member-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .team-chat-member-list strong { color: var(--text-dim); font-size: 11px; }
-.team-chat-member-list small { color: var(--text-faint); font-size: 9px; }
+.team-chat-member-list small { color: var(--text-faint); font-size: var(--text-xs); }
 
 .team-chat-member-reset {
   display: grid;
@@ -1073,13 +1075,13 @@
   color: var(--text-faint);
   background: var(--panel-subtle);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: var(--text-xs);
 }
 
 .team-chat-employee-meta > small {
   overflow: hidden;
   color: var(--text-faint);
-  font-size: 9px;
+  font-size: var(--text-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }

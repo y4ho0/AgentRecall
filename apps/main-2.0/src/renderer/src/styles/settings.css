@@ -1657,6 +1657,7 @@
 
 .dialog-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
   margin-top: 16px;
@@ -1718,11 +1719,6 @@
   .content {
     padding-right: 12px;
     padding-left: 12px;
-  }
-
-  .toolbar {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-    align-items: center;
   }
 
   .toolbar-filters {
