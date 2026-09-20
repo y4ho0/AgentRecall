@@ -48,14 +48,21 @@ Tests run with a dedicated temporary HOME and AGENT_RECALL_TEST_HOME. Native Ele
 - Remaining: MANUAL DOCK LABEL CHECK REQUIRED; Finder double-click and icon appearance also manual. No claim of notarization/Gatekeeper/production packaging acceptance. Offline local bundle includes dev dependencies. Native runtime helpers retain Electron helper naming; the main app identity is AgentRecall. Team approval required for production dependency pruning/update design.
 - Data safety: real DB/data read or written NO; installed app replaced NO; dependency bundle modified NO; credentials used NO. Git: Phase 3 checkpoint d884898e; only packaging/icon export/scripts/package command and local documentation changed in Phase 4.
 
-## Remote freeze
-
 ## Phase 5 — PASS (bounded extraction; semantic convergence proposed)
 
 - Investigation and comparison matrix: [search and ownership review](search-and-ownership-review.md). SQL, filtering and scoring differ materially; changing them all would silently change MCP's public contract. Shared only equivalent parsing/literal escaping; no schema/ranking/filter changes. V1 SQLite remains independent.
 - Characterization before extraction: six cases PASS. After extraction, `npm run build` (including typecheck) PASS; initial new entry changed esbuild's inferred output directory and exposed seven missing-module test failures. Fixed the owning generator with explicit flat entryNames, preserving all existing MCP entry filenames; regenerated bundles.
 - Final focused command: `npm exec vitest run src/core/session-search-query.test.ts src/core/mcp-server.test.ts src/core/postgres/session-search.test.ts src/core/indexer.test.ts`: 4 files, 60 tests PASS, including full oversized fixture and UI/MCP tail search.
 - Data safety: real data touched NO. Risk: source checkout MCP search now needs its generated entry (normal package builds include it). Full semantic parity is NOT CLAIMED; visibility/matching/ranking decisions remain AWAITING_TEAM_APPROVAL. Phase 4 checkpoint 9465048a. Git diff checked before local checkpoint.
+
+## Remote freeze
+
+## Phase 6 — PASS (one responsibility extracted)
+
+- Recounted all four requested files and inspected import/state/IPC ownership; see the ownership review. No mechanical splitting of App, AgentHub or workflow transactions.
+- Native menu ownership extracted from main into application-menu.ts. Main remains the owner of window commands and index refresh; no new state, IPC, persistence or timers introduced.
+- Before extraction: original menu characterization 3/3 PASS. After extraction: application-menu + interface-zoom, 4/4 PASS. `npm run build` PASS, including typecheck/dead-source check (627 production modules); existing missing-font warning unchanged.
+- Data safety: real data touched NO. Risk: OS-visible menu still warrants manual UI acceptance; exact roles, key accelerators and non-mac behavior are covered with mocked Electron. Phase 5 checkpoint 926358a4. Git diff checked; only the menu boundary/test and local review documentation changed.
 
 ## Remote freeze
 
