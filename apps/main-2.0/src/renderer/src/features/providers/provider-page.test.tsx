@@ -89,6 +89,26 @@ describe("ProviderPage", () => {
     })));
   }
 
+  it("exposes the entire configuration path when its summary is truncated", async () => {
+    const configPath = "/tmp/" + "long-config-directory/".repeat(20) + "config.toml";
+    const snapshot = codexSnapshot();
+    vi.mocked(window.sessionSearch.getCodexConfig).mockResolvedValue({ ...snapshot, configPath,
+      activeProvider: { ...snapshot.activeProvider, envKey: "", requiresOpenaiAuth: true,
+        hasApiKey: false, credentialSource: "" },
+    });
+    await mountProviderPage();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
+    const value = container.querySelector(".codex-config-visualizer strong[title]");
+    expect(value?.textContent).toBe(configPath);
+    expect(value?.getAttribute("title")).toBe(configPath);
+    const claudeTab = [...container.querySelectorAll<HTMLButtonElement>('.api-target-tabs button')]
+      .find(button => button.textContent === 'Claude Code')!;
+    await act(async () => claudeTab.click());
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
+    expect(container.querySelector('.codex-config-visualizer strong[title]')?.getAttribute('title'))
+      .toBe('/tmp/claude/settings.json');
+  });
+
   async function mountSummaryPane(): Promise<void> {
     await mountProviderPage();
     const summaryTab = [...container.querySelectorAll<HTMLButtonElement>(".api-target-tabs button")]
