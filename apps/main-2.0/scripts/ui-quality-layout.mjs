@@ -17,6 +17,42 @@ export async function verifyUiQuality({ evaluate, electron, outputRoot, home }) 
   };
   const sizes = [[1280, 800], [1440, 900], [1728, 1117], [2048, 1286], [1000, 800], [860, 800]];
   const results = [];
+  const seedUsageNumbers = () => {
+    document.querySelectorAll('.usage-metrics strong').forEach((el, index) => {
+      el.textContent = ['999.9K', '99.9K', '999.9M', '98.1%'][index];
+    });
+  };
+  const readOverviewDetails = () => ({
+    metrics: [...document.querySelectorAll('.usage-metrics strong')].map(el => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const text = range.getBoundingClientRect();
+      const box = el.getBoundingClientRect();
+      return { text: el.textContent, width: box.width, textWidth: text.width,
+        fontSize: parseFloat(getComputedStyle(el).fontSize), clipped: text.width > box.width + 1 };
+    }),
+    quota: [...document.querySelectorAll('.workbench-quota')].map(el => ({
+      iconWidth: el.querySelector('.quota-identity > i').getBoundingClientRect().width,
+      nameSize: parseFloat(getComputedStyle(el.querySelector('.quota-identity strong')).fontSize),
+      contentGap: el.children[1].getBoundingClientRect().top - el.children[0].getBoundingClientRect().top,
+      overflow: el.scrollWidth - el.clientWidth,
+    })),
+    trendSummaryGap: document.querySelector('.workbench-token-trend-foot > span').getBoundingClientRect().top
+      - document.querySelector('.workbench-token-trend-labels').getBoundingClientRect().bottom,
+  });
+  const assertOverviewDetails = details => {
+    for (const metric of details.metrics) {
+      assert.equal(metric.clipped, false, JSON.stringify(metric));
+      assert.ok(metric.fontSize >= 16 && metric.fontSize <= 26, JSON.stringify(metric));
+    }
+    for (const quota of details.quota) {
+      // Fractional browser zoom rounds CSS pixels to subpixel geometry.
+      assert.ok(Math.abs(quota.iconWidth - 32) <= .5, JSON.stringify(quota));
+      assert.equal(quota.nameSize, 13);
+      assert.ok(Math.abs(quota.contentGap) <= 1 && quota.overflow <= 1, JSON.stringify(quota));
+    }
+    assert.ok(details.trendSummaryGap >= 20, JSON.stringify(details));
+  };
   for (const language of ["zh", "en"]) {
     await renderer(language => localStorage.setItem('agent-recall-language', language), language);
     await evaluate(`${window}.webContents.reload(); undefined`);
@@ -26,6 +62,7 @@ export async function verifyUiQuality({ evaluate, electron, outputRoot, home }) 
     await delay(250);
     for (const page of ["workbench", "sessions", "providers"]) {
       await navigate(page);
+      if (page === 'workbench') await renderer(seedUsageNumbers);
       if (page === "sessions") {
         const deadline = Date.now() + 30_000;
         while (!(await renderer(() => document.querySelectorAll(".session-row").length >= 3))) {
@@ -63,6 +100,14 @@ export async function verifyUiQuality({ evaluate, electron, outputRoot, home }) 
         };
         if (page === "workbench") {
           result.cards = [...document.querySelector(".workbench-overview").children].map(rect);
+          result.metricsHeaderGap = document.querySelector('.usage-metrics').getBoundingClientRect().top
+            - document.querySelector('.workbench-usage-head').getBoundingClientRect().bottom;
+          result.metrics = [...document.querySelectorAll('.usage-metrics strong')].map(el => {
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            const text = range.getBoundingClientRect();
+            return { center: (text.left + text.right) / 2, alignment: getComputedStyle(el).textAlign };
+          });
           result.legend = [...document.querySelectorAll('.workbench-token-legend > span')].map(rect);
           result.workTop = document.querySelector(".workbench-primary-grid").getBoundingClientRect().top;
         }
@@ -97,6 +142,10 @@ export async function verifyUiQuality({ evaluate, electron, outputRoot, home }) 
         return result;
       }, page);
       geometry.language = language;
+      if (page === 'workbench') {
+        geometry.readability = await renderer(readOverviewDetails);
+        assertOverviewDetails(geometry.readability);
+      }
       await fs.writeFile(path.join(outputRoot, "ui-quality-last-geometry.json"), JSON.stringify(geometry, null, 2));
       await screenshot(`${page}-${language}-${width}x${height}`);
       assert.equal(geometry.width, width);
@@ -128,6 +177,14 @@ export async function verifyUiQuality({ evaluate, electron, outputRoot, home }) 
         }
       }
       if (geometry.cards) {
+        assert.ok(geometry.metricsHeaderGap >= 16, 'Usage metrics need breathing room below the header controls');
+        assert.equal(geometry.metrics.length, 4);
+        const metricStep = geometry.metrics[1].center - geometry.metrics[0].center;
+        for (let i = 0; i < geometry.metrics.length; i++) {
+          assert.equal(geometry.metrics[i].alignment, 'center');
+          if (i > 0) assert.ok(Math.abs(geometry.metrics[i].center - geometry.metrics[i - 1].center - metricStep) <= 1,
+            'Usage metric centers must be evenly spaced');
+        }
         assert.ok(Math.max(...geometry.cards.map(card => card.bottom)) < geometry.workTop);
         for (const card of geometry.cards) assert.ok(card.right <= width);
         for (let i = 1; i < geometry.legend.length; i++) {
@@ -145,6 +202,22 @@ export async function verifyUiQuality({ evaluate, electron, outputRoot, home }) 
     }
   }
   }
+  const zoomResults = [];
+  try {
+    await navigate('workbench');
+    for (const width of [1120, 1280, 1728]) {
+      await evaluate(`${window}.setContentSize(${width}, 900); undefined`);
+      for (const zoom of [.8, 1, 1.25, 1.5]) {
+        await evaluate(`${window}.webContents.setZoomFactor(${zoom}); undefined`);
+        await delay(250);
+        await renderer(seedUsageNumbers);
+        const details = await renderer(readOverviewDetails);
+        assertOverviewDetails(details);
+        zoomResults.push({ width, zoom, ...details });
+        await screenshot(`workbench-zoom-${zoom}-${width}`);
+      }
+    }
+  } finally { await evaluate(`${window}.webContents.setZoomFactor(1); undefined`); }
   await evaluate(`${window}.setContentSize(1280, 800); undefined`);
   const otherPages = [];
   for (const page of ['team-chat', 'runtimes', 'workflows', 'evaluation', 'memories', 'skills', 'mcp']) {
@@ -190,6 +263,6 @@ export async function verifyUiQuality({ evaluate, electron, outputRoot, home }) 
     assert.equal(reduced.duration, "0s");
     motion.reduced = reduced;
   } finally { await evaluate(`${window}.webContents.debugger.detach(); undefined`); }
-  await fs.writeFile(path.join(outputRoot, "ui-quality-result.json"), JSON.stringify({ results, otherPages, motion }, null, 2));
-  return { sizes, languages: ['zh', 'en'], screenshotCount: results.length + otherPages.length + 1, motion, resultFile: path.join(outputRoot, "ui-quality-result.json") };
+  await fs.writeFile(path.join(outputRoot, "ui-quality-result.json"), JSON.stringify({ results, zoomResults, otherPages, motion }, null, 2));
+  return { sizes, languages: ['zh', 'en'], screenshotCount: results.length + zoomResults.length + otherPages.length + 1, motion, resultFile: path.join(outputRoot, "ui-quality-result.json") };
 }
