@@ -1,19 +1,19 @@
 # AgentRecall v2 local staged review
 
-Publication status: AWAITING_TEAM_APPROVAL. All work and checkpoints are local.
+Status: READY_FOR_TEAM_REVIEW. Publication and team acceptance: AWAITING_TEAM_APPROVAL. All work and checkpoints are local; this is not a production-release approval.
 
 ## Baseline
 
 Started from 047e2152 on fix/v2-postgres-oversized-turn, with exactly four previously validated PostgreSQL fix files uncommitted. Saved those as 665fc4cb (`checkpoint: local postgres oversized session indexing baseline`). No unrelated working-tree changes were present.
 
-Tests run with a dedicated temporary HOME and AGENT_RECALL_TEST_HOME. Native Electron tests additionally require explicit AGENT_RECALL_HOME_DIR, AGENT_RECALL_APP_DATA_DIR and AGENT_RECALL_USER_DATA_DIR; HOME alone is not sufficient isolation on macOS. No real application data or installed application is a test target.
+Tests use a dedicated temporary HOME; test-specific AGENT_RECALL_TEST_HOME values are not overridden in the final full suite. Native Electron tests additionally require explicit AGENT_RECALL_HOME_DIR, AGENT_RECALL_APP_DATA_DIR and AGENT_RECALL_USER_DATA_DIR; HOME alone is not sufficient isolation on macOS. No real application data or installed application is a test target.
 
 ## Phase 1 — BASELINE PASS
 
 - Migration 56 unchanged; drops unused generated vector and its GIN index, preserves full search_text and trigram index. Historical migrations remain unchanged.
 - Command (apps/main-2.0): `npm exec vitest run src/core/postgres/schema.test.ts src/core/indexer.test.ts src/core/postgres/session-search.test.ts` with isolated HOME.
 - Result: 3 files, 68 tests PASS, including fresh schema, 55→56 data preservation, 3,250,033-byte single Turn, exact message readback, end marker UI/MCP searches and three indexes.
-- Database: isolated PGlite, no external connection. Prior turn also verified native embedded PostgreSQL failure/recovery; final regression will recheck current code.
+- Database: isolated PGlite, no external connection. Final native embedded PostgreSQL recheck also passed (see final regression).
 - Real user data touched: NO. Risk: production migration needs a table lock; production upgrade intentionally not performed.
 - Git after checkpoint: clean; diff empty.
 
@@ -58,8 +58,6 @@ Tests run with a dedicated temporary HOME and AGENT_RECALL_TEST_HOME. Native Ele
 - Before extraction: original menu characterization 3/3 PASS. After extraction: application-menu + interface-zoom, 4/4 PASS. `npm run build` PASS, including typecheck/dead-source check (627 production modules); existing missing-font warning unchanged.
 - Data safety: real data touched NO. Risk: OS-visible menu still warrants manual UI acceptance; exact roles, key accelerators and non-mac behavior are covered with mocked Electron. Phase 5 checkpoint 926358a4. Git diff checked; only the menu boundary/test and local review documentation changed.
 
-## Remote freeze
-
 ## Phase 7 — PASS (incremental UI only)
 
 - Investigation/proposals: search-and-ownership-review.md covers each requested product area. Retained grouped navigation, task-first Workbench and existing typography/spacing token reuse; no new data model, permission changes or broad feature redesign.
@@ -67,6 +65,65 @@ Tests run with a dedicated temporary HOME and AGENT_RECALL_TEST_HOME. Native Ele
 - `NODE_OPTIONS=--no-experimental-webstorage npm exec vitest run src/renderer/src/components/app-navigation.test.tsx src/renderer/src/features/workbench/workbench-page.test.tsx src/renderer/src/App.workflow-workbench.test.tsx src/renderer/src/App.session-open.test.tsx`: 16/16 PASS. Build/typecheck PASS. Node 25 native webstorage is disabled only for these test processes, not globally.
 - Repackaged current source and ran isolated real-app smoke at 1440x900 and 1000x900: PASS, ten destinations, expected 200/84px rail, zero horizontal overflow, task cards before statistics, exit 0 and PostgreSQL stopped. Screenshot inspection caught flex compression/overlap before checkpoint; fixed with non-shrinking sections and added geometry assertions. Final screenshot/geometry has a 22px gap instead of overlap.
 - Data safety: real data touched NO. Remaining: populated-workspace usability, Dock and Finder manual checks; missing Source Serif font installation remains a known pre-existing build warning. Phase 6 checkpoint c36ba241. No production code from an unsuccessful attempt retained.
+
+## Final regression and acceptance matrix
+
+Machine-readable results: [final-verification.json](final-verification.json). Environment: macOS arm64, Node 25.8.0, native PostgreSQL 18.4. Code checkpoint: 1c4800de. Commands below were executed from apps/main-2.0 except release-note validation and Git commands (repository root).
+
+| Acceptance item | Result | Evidence / limitation |
+| --- | --- | --- |
+| PostgreSQL oversized Turn | PASS | 3,250,033 bytes, full exact readback, no truncation, 3 repeated indexes |
+| Fresh migration and 55→56 upgrade | PASS | PGlite plus native PostgreSQL; text/trgm preserved; vector/GIN removed |
+| Failed update rollback and user-state integrity | PASS | legacy size error leaves original message intact; custom title/favorite survive upgrade and reindex |
+| macOS launcher stripped PATH / fallback | PASS | real env-node CLI, login PATH, spaces, missing CLI and baked fallback |
+| Repeated failure handling | PASS | aggregation, timestamps/count, bounded backoff, revision/manual/restart recovery |
+| macOS bundle identity | AUTOMATED PASS / MANUAL_CHECK_REQUIRED | plist/executable/icon/signature verified; visual Dock/Finder not asserted |
+| UI search | PASS | repository suite and >3MB native/PGlite tail search |
+| MCP search | PASS | shared lexical contract and native/PGlite tail search; full UI/MCP semantic equivalence not claimed |
+| Typecheck / dead-source analysis | PASS | 627 production modules reachable |
+| Full V2 Vitest suite | PASS | 272 files, 2,623 tests, 0 failed, 0 skipped |
+| Full V2 script suite | PASS | 169 tests, 0 failed |
+| Build | PASS WITH WARNING | pre-existing missing installed Source Serif 4 font resource; system fallback remains |
+| Isolated real GUI smoke | PASS | 1440/1000 widths, 200/84 navigation, no overflow/overlap, actual renderer; graceful exit and PG shutdown |
+| Release note / diff whitespace | PASS | exactly one V2 fragment, 4 fixes; git diff --check |
+| Real user DB/data accessed or modified | NO | synthetic temporary databases and explicit native path isolation |
+| Global Node/Homebrew/shell/system config changed | NO | only per-command environment and temporary shell fixture |
+
+Final full-suite commands (HOME was /tmp/agent-recall-local-goal-GO7k7c; inherited AGENT_RECALL_TEST_HOME removed):
+
+- `NODE_OPTIONS=--no-experimental-webstorage npm exec -- vitest run --reporter=default --reporter=json --outputFile=/tmp/agent-recall-local-goal-GO7k7c/final-vitest.json`: PASS, 92.63 seconds.
+- `NODE_OPTIONS=--no-experimental-webstorage node --test --test-reporter=spec --test-reporter=junit --test-reporter-destination=stdout --test-reporter-destination=/tmp/agent-recall-local-goal-GO7k7c/final-scripts.xml scripts/*.test.mjs`: PASS, 8.20 seconds. Publishing/update test names exercise fixtures/mocks, not real remote publishing or global installs.
+- `npm run build`: PASS after final UI fix. `node scripts/package-local-macos.mjs`, then `node scripts/smoke-local-macos.mjs <generated-app>`: PASS.
+- `node --import tsx scripts/verify-local-postgres.mjs <generated-app>`: PASS. Uses copied native binaries, a fresh managed temporary cluster, asserts actual data_directory, then a second fresh database. Reproduces the old error exactly: string is too long for tsvector (4000054 bytes, max 1048575 bytes). Both databases and server are cleaned after verification.
+- `npm run release-note:check`, `git diff 047e2152..HEAD --check`: PASS. Final copied bundle passed codesign --verify --deep --strict after smoke. Original dependency plist still says Electron; it was not patched.
+
+Earlier default Node 25 renderer failures are distinct from the retained changes: removing NODE_OPTIONS alone did not fix them. The final run explicitly disables Node native webstorage only for tests and all tests pass. No claim that an injected environment option alone caused those earlier failures.
+
+## Local checkpoints
+
+| Phase | Local commit |
+| --- | --- |
+| Oversized-turn baseline | 665fc4cb |
+| Login-shell launcher | 72f20bb8 |
+| Failure aggregation/backoff | d884898e |
+| Isolated macOS review bundle | 9465048a |
+| Shared lexical search contract | 926358a4 |
+| Native menu ownership | c36ba241 |
+| Task-first UI/navigation | 1c4800de |
+
+Final validation script/results/report are a separate local checkpoint after these. No phase was abandoned or left in a known-broken partial state. Interim failures (test fixture environment, nested sandbox, inferred MCP build path, UI overlap) were resolved and revalidated before each phase checkpoint. Broader search/state-machine/UI changes remain explicit proposals, not secretly incomplete implementation.
+
+## Remaining risks and manual checks
+
+- Release gate: team discussion/agreement has NOT occurred. Team acceptance and every later remote action remain AWAITING_TEAM_APPROVAL. No known critical/high regression was found in the retained local diff, but tests are not production acceptance.
+- Medium: actual Finder double-click, Dock label/icon, macOS menu interaction, and Gatekeeper/quarantine behavior require manual checks using explicitly isolated paths. Local packaging is review-only, includes development dependencies, and has no production update/notarization integration.
+- Medium: production migration takes a table lock; production-volume upgrade timing, backup/recovery and downgrade policy require a separate authorized plan. Do not recreate the old generated vector over retained oversized text. No production migration or downgrade was performed.
+- Medium: missing installed Source Serif 4 resource causes a build warning and fallback rendering; no remote dependency installation or in-place dependency patch was attempted. Resolve the dependency installation through the team's approved environment before publication.
+- Medium: UI/MCP hidden/source/project/mixed-clause/ranking contracts still differ; the design review lists exact decisions required before unification. No unproven parity claim.
+- Low: mtime/size freshness can miss deliberately timestamp-preserved same-size edits; retry state is intentionally process-local and caps at 1,000 entries. Catalog-scale search/backoff performance and populated-workspace usability were not benchmarked.
+- NOT PERFORMED: real provider credentials, real sessions, installed application upgrade/uninstall, Windows execution, production release acceptance. Windows/non-mac branches are covered only by automated fixtures where applicable.
+
+Cleanup: every Goal-started GUI/PostgreSQL process was stopped. The three explicitly generated temporary review bundles, smoke/native databases, and temporary test HOME/raw reports were removed; the aggregate verification JSON remains in this repository. Screenshots were visually inspected before cleanup. Installed apps, dependency bundles and real user data remain untouched. Removed test artifacts are reproducible with the retained local scripts; no user-owned files were deleted.
 
 ## Remote freeze
 

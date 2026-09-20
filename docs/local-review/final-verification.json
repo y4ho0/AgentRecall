@@ -1,0 +1,75 @@
+{
+  "sourceHead": "1c4800de",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v25.8.0",
+    "testNodeOptions": "--no-experimental-webstorage"
+  },
+  "vitest": {
+    "success": true,
+    "files": 272,
+    "total": 2623,
+    "passed": 2623,
+    "failed": 0,
+    "pending": 0
+  },
+  "scripts": {
+    "total": 169,
+    "passed": 169,
+    "failed": 0
+  },
+  "nativePostgres": {
+    "status": "PASS",
+    "bytes": 3250033,
+    "oldSchemaError": "string is too long for tsvector (4000054 bytes, max 1048575 bytes)",
+    "upgrade": "55 -> 56",
+    "repeatedIndexes": 3,
+    "exactReadback": true,
+    "uiTailSearch": true,
+    "mcpTailSearch": true,
+    "preservedUserState": true,
+    "freshSchema": true,
+    "nativeVersion": "18.4"
+  },
+  "gui": {
+    "status": "PASS",
+    "packaged": true,
+    "name": "agent-recall-v2",
+    "executableName": "AgentRecall",
+    "layouts": [
+      {
+        "width": 1440,
+        "navigationWidth": 200,
+        "pageCount": 10,
+        "taskFirst": true,
+        "cardsBottom": 779.390625,
+        "usageTop": 801.390625,
+        "overflow": 0
+      },
+      {
+        "width": 1000,
+        "navigationWidth": 84,
+        "pageCount": 10,
+        "taskFirst": true,
+        "cardsBottom": 779.390625,
+        "usageTop": 801.390625,
+        "overflow": 0
+      }
+    ],
+    "isolation": "explicit paths + sandbox real-home deny + loopback-only",
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "postgresStopped": true,
+    "manual": [
+      "Dock label",
+      "Finder double-click"
+    ]
+  },
+  "build": "PASS with pre-existing missing Source Serif 4 font warning",
+  "releaseNotes": "PASS: v2, 0 features, 4 fixes",
+  "remoteMutations": 0,
+  "realUserDataAccessed": false
+}
