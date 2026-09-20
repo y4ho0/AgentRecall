@@ -16,10 +16,24 @@ assert.equal(path.basename(appPath), "AgentRecall.app");
 const testRoot = await fs.mkdtemp(path.join(os.tmpdir(), "agent-recall-gui-smoke-"));
 const realHome = os.userInfo().homedir;
 const home = path.join(testRoot, "home");
+const uiQuality = process.argv.includes("--ui-quality");
 const userData = path.join(testRoot, "user-data");
 const appData = path.join(testRoot, "app-data");
 for (const directory of [home, userData, appData, path.join(testRoot, "tmp")]) await fs.mkdir(directory);
 await fs.writeFile(path.join(home, ".zprofile"), 'export PATH=/usr/bin:/bin\n');
+if (uiQuality) {
+  const project = path.join(home, "synthetic-review-project");
+  const source = path.join(home, ".claude/projects/review-fixtures");
+  await fs.mkdir(project);
+  await fs.mkdir(source, { recursive: true });
+  for (const [index, branch] of ["main", "refactor/frontend-storage-foundation", "very-long-unbroken-" + "x".repeat(180)].entries()) {
+    await fs.writeFile(path.join(source, `review-${index}.jsonl`), JSON.stringify({
+      type: "user", sessionId: `review-${index}`, cwd: project, gitBranch: branch,
+      timestamp: new Date().toISOString(),
+      message: { role: "user", content: `Synthetic UI review ${index}: verify typography and metadata layout.` },
+    }) + "\n");
+  }
+}
 const environment = {
   PATH: "/usr/bin:/bin", HOME: home, USER: os.userInfo().username, LOGNAME: os.userInfo().username,
   SHELL: "/bin/zsh", ZDOTDIR: home, LANG: "en_US.UTF-8", TMPDIR: path.join(testRoot, "tmp"),
@@ -109,15 +123,15 @@ try {
         const overview = document.querySelector('.workbench-overview');
         return { width: innerWidth, navigationWidth: nav.getBoundingClientRect().width,
           pageCount: nav.querySelectorAll('nav button[data-page]').length,
-          taskFirst: Boolean(primary.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING),
-          cardsBottom: Math.max(...[...primary.children].map(card => card.getBoundingClientRect().bottom)),
-          usageTop: overview.getBoundingClientRect().top,
+          overviewFirst: Boolean(overview.compareDocumentPosition(primary) & Node.DOCUMENT_POSITION_FOLLOWING),
+          cardsTop: primary.getBoundingClientRect().top,
+          usageBottom: overview.getBoundingClientRect().bottom,
           overflow: content.scrollWidth - content.clientWidth };
       })()`)});
     })()`);
     assert.equal(layout.pageCount, 10);
-    assert.equal(layout.taskFirst, true);
-    assert.ok(layout.cardsBottom <= layout.usageTop, `Workbench cards overlap usage: ${JSON.stringify(layout)}`);
+    assert.equal(layout.overviewFirst, true);
+    assert.ok(layout.usageBottom <= layout.cardsTop, `Workbench cards overlap usage: ${JSON.stringify(layout)}`);
     assert.equal(layout.navigationWidth, width >= 1280 ? 200 : 84);
     assert.ok(layout.overflow <= 1, `Workbench overflows: ${JSON.stringify(layout)}`);
     layouts.push(layout);
@@ -128,6 +142,10 @@ try {
     await fs.writeFile(path.join(outputRoot, `workbench-${width}.png`), Buffer.from(png, "base64"));
   }
   const report = { status: "PASS", state, layouts, isolation: "explicit paths + sandbox real-home deny + loopback-only", manual: ["Dock label", "Finder double-click"], testRoot };
+  if (uiQuality) {
+    const { verifyUiQuality } = await import("./ui-quality-layout.mjs");
+    report.uiQuality = await verifyUiQuality({ evaluate, electron, outputRoot, home });
+  }
   quitRequested = true;
   await evaluate(`${electron}.app.quit(); undefined`);
   socket.close();

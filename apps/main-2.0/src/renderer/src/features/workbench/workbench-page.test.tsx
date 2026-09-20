@@ -2,8 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { WorkbenchPage, normalizeWorkbenchCardOrder, reorderWorkbenchCard, type WorkbenchPageProps } from "./workbench-page";
 
-describe("task-first workbench", () => {
-  it("places actionable work before usage in DOM order and keeps failure feedback", () => {
+describe("workbench overview and work entries", () => {
+  it("places the overview above work without losing task entries or failure feedback", () => {
     const noop = vi.fn();
     const props: WorkbenchPageProps = {
       stats: { total: { sessionCount: 0, messageCount: 0, inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, reasoningOutputTokens: 0, totalTokens: 0 },
@@ -22,7 +22,7 @@ describe("task-first workbench", () => {
       onShowMemories: noop, onShowSkills: noop,
     };
     const html = renderToStaticMarkup(<WorkbenchPage {...props} />);
-    expect(html.indexOf("workbench-primary-grid")).toBeLessThan(html.indexOf("workbench-overview"));
+    expect(html.indexOf("workbench-overview")).toBeLessThan(html.indexOf("workbench-primary-grid"));
     expect(html).toContain('aria-label="Continue work"');
     expect(html).toContain("Workflow needs attention");
     expect(html).toContain("Refresh usage");
