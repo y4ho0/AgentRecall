@@ -108,16 +108,19 @@ function buildInfoPlist(version) {
 // version after a newer install appears (#499). The baked absolute paths stay
 // as a fallback for when the login shell cannot resolve the command at all.
 function buildLauncherScript(nodePath, cliPath) {
+  const quote = (value) => `"${value.replace(/[\\"$`]/g, "\\$&")}"`;
   return `#!/bin/zsh
-resolved=$(/bin/zsh -lc 'command -v agent-recall-v2' 2>/dev/null)
+exec /bin/zsh -lc '
+resolved=$(command -v agent-recall-v2 2>/dev/null)
 if [ -n "\${resolved}" ] && [ -x "\${resolved}" ]; then
-  exec "\${resolved}"
+  exec "\${resolved}" "\${@:3}"
 fi
-if [ -x "${nodePath}" ] && [ -f "${cliPath}" ]; then
-  exec "${nodePath}" "${cliPath}"
+if [ -x "$1" ] && [ -f "$2" ]; then
+  exec "$1" "$2" "\${@:3}"
 fi
 echo "未找到 agent-recall-v2：请重新安装，或运行 agent-recall-v2 install-app 重新生成启动器。" >&2
 exit 1
+' agent-recall-launcher ${quote(nodePath)} ${quote(cliPath)} "$@"
 `;
 }
 
