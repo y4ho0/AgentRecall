@@ -27,6 +27,11 @@ describe("workbench overview and work entries", () => {
     expect(html).toContain("Workflow needs attention");
     expect(html).toContain("Refresh usage");
     expect(html).toContain("Refresh model quotas");
+    props.quotas.providers = [{ provider: "codex", displayName: "Codex", status: "not_configured", quotas: [], detail: "Existing quota guidance" }];
+    props.quotaLoading = true;
+    const refreshing = renderToStaticMarkup(<WorkbenchPage {...props} />);
+    expect(refreshing).toContain("Existing quota guidance");
+    expect(refreshing).toContain("Open settings");
   });
 
   it("prioritizes sessions/workflows/chat for new layouts without resetting existing custom order", () => {

@@ -811,8 +811,8 @@ function WorkbenchQuota({
       <div className="quota-identity"><i>{provider === "codex" ? "CX" : "CC"}</i><strong>{displayName}</strong></div>
       {available ? <div className="workbench-quota-windows">{quotas.map((quota) => <WorkbenchQuotaWindow key={quota.key} quota={quota} language={language} />)}</div> : (
         <div className="workbench-quota-empty">
-          <span>{loading ? l("Checking quota...", "正在检查额度...") : card?.detail || l("Quota is unavailable.", "额度暂不可用。")}</span>
-          {!loading ? <button onClick={onOpenSettings}>{l("Open settings", "打开设置")}</button> : null}
+          <span>{loading && !card ? l("Checking quota...", "正在检查额度...") : card?.detail || l("Quota is unavailable.", "额度暂不可用。")}</span>
+          {!loading || card ? <button onClick={onOpenSettings}>{l("Open settings", "打开设置")}</button> : null}
         </div>
       )}
     </div>

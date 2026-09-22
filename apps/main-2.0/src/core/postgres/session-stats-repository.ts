@@ -157,12 +157,12 @@ function formatTrendBucketLabel(
   return `${month}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-function dailyRanges(now: number): Array<Pick<SessionDailyTokenUsage, "dayStart" | "dayEndExclusive">> {
+function dailyRanges(now: number, count: number): Array<Pick<SessionDailyTokenUsage, "dayStart" | "dayEndExclusive">> {
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
-  return Array.from({ length: 7 }, (_, index) => {
+  return Array.from({ length: count }, (_, index) => {
     const start = new Date(today);
-    start.setDate(today.getDate() - (6 - index));
+    start.setDate(today.getDate() - (count - 1 - index));
     const end = new Date(start);
     end.setDate(start.getDate() + 1);
     return { dayStart: start.getTime(), dayEndExclusive: end.getTime() };
@@ -375,7 +375,8 @@ export class PostgresSessionStatsRepository {
       emptyStatsSummary(),
     );
 
-    const days = dailyRanges(now);
+    const historyDays = options.dailyHistoryDays === 30 || options.dailyHistoryDays === 90 ? options.dailyHistoryDays : 7;
+    const days = dailyRanges(now, historyDays);
     const dailyRows = await this.database.query<{
       occurred_at: Date | string;
       input_tokens: number | string;
@@ -409,27 +410,20 @@ export class PostgresSessionStatsRepository {
         new Date(now).toISOString(),
       ],
     );
-    const dailyTokenUsage = days.map<SessionDailyTokenUsage>((day) => {
-      const usage = dailyRows.rows
-        .filter((row) => {
-          const timestamp = timeValue(row.occurred_at);
-          return timestamp >= day.dayStart && timestamp < day.dayEndExclusive;
-        })
-        .reduce<TokenUsage>(
-          (sum, row) => ({
-            inputTokens: sum.inputTokens + numberValue(row.input_tokens),
-            outputTokens: sum.outputTokens + numberValue(row.output_tokens),
-            cachedInputTokens: sum.cachedInputTokens + numberValue(row.cached_input_tokens),
-            ...((sum.cacheCreationInputTokens ?? 0) + numberValue(row.cache_creation_input_tokens) > 0
-              ? { cacheCreationInputTokens: (sum.cacheCreationInputTokens ?? 0) + numberValue(row.cache_creation_input_tokens) }
-              : {}),
-            reasoningOutputTokens: sum.reasoningOutputTokens + numberValue(row.reasoning_output_tokens),
-            totalTokens: sum.totalTokens + numberValue(row.total_tokens),
-          }),
-          normalizedTokenUsage(),
-        );
-      return { ...day, ...usage };
-    });
+    // Bucket each event once, including for the longer workbench history window.
+    const dailyTotals = new Map(days.map(day => [day.dayStart, normalizedTokenUsage()]));
+    for (const row of dailyRows.rows) {
+      const usage = dailyTotals.get(startOfTrendBucket(timeValue(row.occurred_at), "day"));
+      if (!usage) continue;
+      usage.inputTokens += numberValue(row.input_tokens);
+      usage.outputTokens += numberValue(row.output_tokens);
+      usage.cachedInputTokens += numberValue(row.cached_input_tokens);
+      const cacheCreated = numberValue(row.cache_creation_input_tokens);
+      if (cacheCreated > 0) usage.cacheCreationInputTokens = (usage.cacheCreationInputTokens ?? 0) + cacheCreated;
+      usage.reasoningOutputTokens += numberValue(row.reasoning_output_tokens);
+      usage.totalTokens += numberValue(row.total_tokens);
+    }
+    const dailyTokenUsage = days.map<SessionDailyTokenUsage>(day => ({ ...day, ...dailyTotals.get(day.dayStart)! }));
 
     const previousRange = resolvePreviousStatsRange(range);
     const previousTotal = includePrevious && previousRange

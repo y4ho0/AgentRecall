@@ -10,6 +10,18 @@ const CHART_LEFT = 10;
 const CHART_RIGHT = 10;
 const CHART_TOP = 7;
 const CHART_BOTTOM = 9;
+const TREND_PERIOD_STORAGE_KEY = "agent-recall.workbench-token-trend-period.v2";
+
+function loadTrendPeriod(): 7 | 30 | 90 {
+  if (typeof window === "undefined") return 7;
+  try {
+    const stored = window.localStorage.getItem(TREND_PERIOD_STORAGE_KEY);
+    return stored === "30" ? 30 : stored === "90" ? 90 : 7;
+  } catch {
+    // An unavailable browser profile must not prevent the chart from rendering.
+    return 7;
+  }
+}
 
 interface TokenTrendChartProps {
   points: SessionDailyTokenUsage[];
@@ -23,11 +35,13 @@ interface ChartPoint {
   y: number;
 }
 
-export function TokenTrendChart({ points = [], language, onSelectDay }: TokenTrendChartProps): ReactElement {
+export function TokenTrendChart({ points: history = [], language, onSelectDay }: TokenTrendChartProps): ReactElement {
+  const [period, setPeriod] = useState<7 | 30 | 90>(loadTrendPeriod);
+  const points = history.slice(-period);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const gradientId = `token-trend-${useId().replace(/:/g, "")}`;
   const locale = language === "zh" ? "zh-CN" : "en-US";
-  const shortDate = new Intl.DateTimeFormat(locale, { weekday: "short" });
+  const shortDate = new Intl.DateTimeFormat(locale, period === 7 ? { weekday: "short" } : { month: "numeric", day: "numeric" });
   const fullDate = new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", weekday: "short" });
   const l = (en: string, zh: string) => localize(language, en, zh);
   const total = points.reduce((sum, point) => sum + Math.max(0, point.totalTokens), 0);
@@ -48,23 +62,38 @@ export function TokenTrendChart({ points = [], language, onSelectDay }: TokenTre
     ? `${linePath} L ${chartPoints[chartPoints.length - 1].x} ${CHART_HEIGHT - CHART_BOTTOM} L ${chartPoints[0].x} ${CHART_HEIGHT - CHART_BOTTOM} Z`
     : "";
   const activePoint = activeIndex == null ? null : chartPoints[activeIndex] ?? null;
+  const tickCount = Math.min(points.length, period === 7 ? 7 : 5);
+  const tickIndexes = Array.from({ length: tickCount }, (_, index) =>
+    Math.round(index * (points.length - 1) / (tickCount - 1 || 1)));
+  const tooltipAlignment = activePoint && activePoint.x < CHART_WIDTH * .35
+    ? "start"
+    : activePoint && activePoint.x > CHART_WIDTH * .65 ? "end" : "center";
   const tooltipStyle: CSSProperties | undefined = activePoint
-    ? activeIndex != null && activeIndex <= 1
+    ? tooltipAlignment === "start"
       ? { left: 4 }
-      : activeIndex != null && activeIndex >= chartPoints.length - 2
+      : tooltipAlignment === "end"
         ? { right: 4 }
         : { left: `${(activePoint.x / CHART_WIDTH) * 100}%` }
     : undefined;
-  const tooltipAlignment = activeIndex != null && activeIndex <= 1
-    ? "start"
-    : activeIndex != null && activeIndex >= chartPoints.length - 2
-      ? "end"
-      : "center";
 
   return (
-    <section className="workbench-token-trend" aria-label={l("Token usage over the last 7 days", "近 7 天 Token 用量")}>
+    <section className="workbench-token-trend" data-period={period} aria-label={l(`Token usage over the last ${period} days`, `近 ${period} 天 Token 用量`)}>
       <header className="workbench-token-trend-head">
-        <strong>{l("Token · Last 7 days", "近 7 天 Token")}</strong>
+        <strong>Token</strong>
+        <select className="workbench-period-select" aria-label={l("Trend period", "趋势周期")} value={period}
+          onChange={event => {
+            const value = Number(event.target.value);
+            if (value !== 7 && value !== 30 && value !== 90) return;
+            setPeriod(value);
+            setActiveIndex(null);
+            try {
+              window.localStorage.setItem(TREND_PERIOD_STORAGE_KEY, String(value));
+            } catch {
+              // A read-only browser profile still permits changes for this mount.
+            }
+          }}>
+          {[7, 30, 90].map(days => <option key={days} value={days}>{l(`Last ${days} days`, `近 ${days} 天`)}</option>)}
+        </select>
         <span><b>{formatTokenCount(total)}</b> Token</span>
       </header>
 
@@ -89,7 +118,8 @@ export function TokenTrendChart({ points = [], language, onSelectDay }: TokenTre
                 key={point.day.dayStart}
                 type="button"
                 className={`workbench-token-trend-point ${index === chartPoints.length - 1 ? "today" : ""}`}
-                style={{ left: `${(point.x / CHART_WIDTH) * 100}%`, top: `${(point.y / CHART_HEIGHT) * 100}%` }}
+                style={{ left: `${(point.x / CHART_WIDTH) * 100}%`, top: `${(point.y / CHART_HEIGHT) * 100}%`,
+                  ...(period > 7 ? { width: `${100 / points.length}%` } : {}) }}
                 onMouseEnter={() => setActiveIndex(index)}
                 onMouseLeave={() => setActiveIndex((current) => (current === index ? null : current))}
                 onFocus={() => setActiveIndex(index)}
@@ -125,13 +155,13 @@ export function TokenTrendChart({ points = [], language, onSelectDay }: TokenTre
           ) : null}
 
           {points.length > 0 && maxValue === 0 ? (
-            <span className="workbench-token-trend-empty">{l("No Token usage in the last 7 days", "近 7 天暂无 Token 用量")}</span>
+            <span className="workbench-token-trend-empty">{l(`No Token usage in the last ${period} days`, `近 ${period} 天暂无 Token 用量`)}</span>
           ) : null}
         </div>
 
-        <div className="workbench-token-trend-labels" aria-hidden="true">
-          {points.map((point, index) => (
-            <span key={point.dayStart} className={index === points.length - 1 ? "today" : ""}>{shortDate.format(point.dayStart)}</span>
+        <div className="workbench-token-trend-labels" aria-hidden="true" style={{ gridTemplateColumns: `repeat(${tickIndexes.length || 1}, minmax(0, 1fr))` }}>
+          {tickIndexes.map(index => (
+            <span key={points[index].dayStart} className={index === points.length - 1 ? "today" : ""}>{shortDate.format(points[index].dayStart)}</span>
           ))}
         </div>
       </div>

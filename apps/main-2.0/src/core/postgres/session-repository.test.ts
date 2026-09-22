@@ -894,4 +894,21 @@ describe("PostgresSessionRepository", () => {
         buckets: [{ totalTokens: 175 }],
       });
   });
+
+  it("extends daily workbench history independently of summary period and bounds unsupported ranges", async () => {
+    await repository.upsertIndexedSession(session(), messages, tokens, traces);
+    const now = Date.parse("2026-08-25T12:00:00.000Z");
+    const recent = await statsRepository.getStats({ period: "allTime", dailyHistoryDays: 30 }, now);
+    const history = await statsRepository.getStats({ period: "allTime", dailyHistoryDays: 90 }, now);
+    expect(recent.dailyTokenUsage).toHaveLength(30);
+    expect(history.dailyTokenUsage).toHaveLength(90);
+    expect(recent.total).toEqual(history.total);
+    expect(recent.dailyTokenUsage.reduce((sum, day) => sum + day.totalTokens, 0)).toBe(0);
+    expect(history.dailyTokenUsage.reduce((sum, day) => sum + day.totalTokens, 0)).toBe(175);
+    for (let i = 1; i < history.dailyTokenUsage.length; i++) {
+      expect(history.dailyTokenUsage[i].dayStart).toBe(history.dailyTokenUsage[i - 1].dayEndExclusive);
+    }
+    const invalid = await statsRepository.getStats({ period: "allTime", dailyHistoryDays: -1 as 7 }, now);
+    expect(invalid.dailyTokenUsage).toHaveLength(7);
+  });
 });

@@ -11,6 +11,8 @@
 .settings-dialog .dialog-title {
   margin: 0;
   padding: 15px 18px;
+  padding-left: 24px;
+  font-size: 18px;
   border-bottom: 1px solid var(--border);
 }
 

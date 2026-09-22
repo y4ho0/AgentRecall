@@ -27,11 +27,18 @@ if (uiQuality) {
   await fs.mkdir(project);
   await fs.mkdir(source, { recursive: true });
   for (const [index, branch] of ["main", "refactor/frontend-storage-foundation", "very-long-unbroken-" + "x".repeat(180)].entries()) {
-    await fs.writeFile(path.join(source, `review-${index}.jsonl`), JSON.stringify({
+    const timestamp = new Date();
+    timestamp.setDate(timestamp.getDate() - [0, 14, 60][index]);
+    await fs.writeFile(path.join(source, `review-${index}.jsonl`), [JSON.stringify({
       type: "user", sessionId: `review-${index}`, cwd: project, gitBranch: branch,
-      timestamp: new Date().toISOString(),
+      timestamp: timestamp.toISOString(),
       message: { role: "user", content: `Synthetic UI review ${index}: verify typography and metadata layout.` },
-    }) + "\n");
+    }), JSON.stringify({
+      type: "assistant", sessionId: `review-${index}`, cwd: project, gitBranch: branch,
+      timestamp: timestamp.toISOString(),
+      message: { id: `synthetic-answer-${index}`, role: "assistant", content: [{type:"text", text:"Synthetic layout fixture response."}],
+        usage: { input_tokens: 1000 * (index + 1), output_tokens: 100 * (index + 1), cache_read_input_tokens: 250 } },
+    })].join("\n") + "\n");
   }
 }
 const environment = {

@@ -21,8 +21,15 @@ export async function verifyUiQuality({ evaluate, electron, outputRoot, home }) 
     document.querySelectorAll('.usage-metrics strong').forEach((el, index) => {
       el.textContent = ['999.9K', '99.9K', '999.9M', '98.1%'][index];
     });
+    document.querySelector('.workbench-detail-title span').textContent = localStorage.getItem('agent-recall-language') === 'zh'
+      ? '缓存命中占输入 98.1%' : 'Cache hits cover 98.1% of input';
   };
   const readOverviewDetails = () => ({
+    caption: (() => {
+      const el = document.querySelector('.workbench-detail-title span');
+      return {overflow:el.scrollWidth - el.clientWidth, ellipsis:getComputedStyle(el).textOverflow};
+    })(),
+    plotHeight: document.querySelector('.workbench-token-trend-canvas').getBoundingClientRect().height,
     metrics: [...document.querySelectorAll('.usage-metrics strong')].map(el => {
       const range = document.createRange();
       range.selectNodeContents(el);
@@ -41,6 +48,8 @@ export async function verifyUiQuality({ evaluate, electron, outputRoot, home }) 
       - document.querySelector('.workbench-token-trend-labels').getBoundingClientRect().bottom,
   });
   const assertOverviewDetails = details => {
+    assert.ok(details.caption.overflow <= 1 && details.caption.ellipsis !== 'ellipsis', JSON.stringify(details.caption));
+    assert.ok(details.plotHeight >= 139, JSON.stringify(details.plotHeight));
     for (const metric of details.metrics) {
       assert.equal(metric.clipped, false, JSON.stringify(metric));
       assert.ok(metric.fontSize >= 16 && metric.fontSize <= 26, JSON.stringify(metric));
@@ -76,15 +85,22 @@ export async function verifyUiQuality({ evaluate, electron, outputRoot, home }) 
         await delay(200);
       }
       if (page === "providers") {
-        await renderer((home) => {
+        await renderer(() => {
           [...document.querySelectorAll('.api-provider-switch button')]
             .find(button => button.querySelector('strong')?.textContent === 'Custom')?.click();
+        });
+        await delay(100);
+        await renderer((home) => {
           const input = document.querySelector(".provider-path-input input");
           const value = home + "/" + "long-configuration-directory/".repeat(10);
           Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(input, value);
           input.dispatchEvent(new Event("input", { bubbles: true }));
         }, home);
-        await delay(500);
+        const pathDeadline = Date.now() + 10_000;
+        while (!(await renderer(home => document.querySelector('.codex-config-visualizer strong[title]')?.title.startsWith(home), home))) {
+          if (Date.now() > pathDeadline) throw Error('Synthetic provider path did not finish loading');
+          await delay(200);
+        }
       }
       const geometry = await renderer((page) => {
         const rect = (element) => {
@@ -308,19 +324,73 @@ export async function verifyUiQuality({ evaluate, electron, outputRoot, home }) 
       assert.deepEqual(header, reference, JSON.stringify({page, width, header, reference}));
       interactions.push({page, width, height, header});
       if (page === 'workbench') {
-        await renderer(() => document.querySelector('.workbench-usage-actions button').click());
-        await delay(700);
-        const feedback = await renderer(() => {
-          const el = document.querySelector('.workbench-feedback');
-          const r = el.getBoundingClientRect();
-          const parent = el.parentElement.getBoundingClientRect();
-          return { text: el.textContent, inset: parent.bottom - r.bottom, padding: parseFloat(getComputedStyle(el).paddingBottom),
-            position: getComputedStyle(el).position, overflow: el.scrollWidth - el.clientWidth };
+        const readCards = () => [...document.querySelector('.workbench-overview').children].map(el => {
+          const r = el.getBoundingClientRect(); return {left:r.left, width:r.width, height:r.height};
         });
-        assert.ok(feedback.text.length > 0 && feedback.inset >= 12 && feedback.padding >= 8, JSON.stringify(feedback));
-        assert.equal(feedback.position, 'static');
-        assert.ok(feedback.overflow <= 1);
-        interactions.push({page, width, feedback});
+        const beforeRefresh = await renderer(readCards);
+        for (const selector of ['.workbench-usage-actions button', '.workbench-quota-card-head button']) {
+          await renderer(selector => document.querySelector(selector).click(), selector);
+          for (const pause of [50, 650, 1900]) {
+            await delay(pause);
+            const after = await renderer(readCards);
+            after.forEach((card, i) => {
+              for (const key of ['left', 'width', 'height']) assert.ok(Math.abs(card[key] - beforeRefresh[i][key]) <= 1,
+                JSON.stringify({selector, width, pause, beforeRefresh, after}));
+            });
+            if (pause === 650) {
+              const feedback = await renderer(() => {
+                const el = document.querySelector('.workbench-feedback');
+                const r = el.getBoundingClientRect();
+                const parent = el.parentElement.getBoundingClientRect();
+                return { text: el.textContent, inset: parent.bottom - r.bottom, background:getComputedStyle(el).backgroundColor,
+                  position: getComputedStyle(el).position, overflow: el.scrollWidth - el.clientWidth };
+              });
+              assert.ok(feedback.text.length > 0 && feedback.inset >= 11.5, JSON.stringify(feedback));
+              assert.equal(feedback.position, 'absolute');
+              assert.equal(feedback.background, 'rgba(0, 0, 0, 0)');
+              assert.ok(feedback.overflow <= 1);
+              interactions.push({page, width, selector, feedback, stableCards:after});
+            }
+          }
+        }
+        for (const days of [7, 30, 90]) {
+          await renderer(days => {
+            const select = document.querySelector('.workbench-token-trend-head select');
+            select.value = String(days); select.dispatchEvent(new Event('change', {bubbles:true}));
+          }, days);
+          await delay(100);
+          const trend = await renderer(() => ({
+            points:document.querySelectorAll('.workbench-token-trend-point').length,
+            markerOpacity:getComputedStyle(document.querySelector('.workbench-token-trend-point:not(.today):not(:hover):not(:focus-visible) > span')).opacity,
+            nonZeroPoints:[...document.querySelectorAll('.workbench-token-trend-point')].filter(el => !el.getAttribute('aria-label').endsWith(', 0 Token')).length,
+            labels:document.querySelectorAll('.workbench-token-trend-labels span').length,
+            height:document.querySelector('.workbench-token-trend').getBoundingClientRect().height,
+            plotHeight:document.querySelector('.workbench-token-trend-canvas').getBoundingClientRect().height,
+            metricsPadding:getComputedStyle(document.querySelector('.usage-metrics')).paddingTop,
+            divider:getComputedStyle(document.querySelector('.usage-metrics')).borderTopWidth,
+          }));
+          assert.equal(trend.points, days);
+          assert.equal(trend.markerOpacity, days === 7 ? '1' : '0');
+          assert.equal(trend.nonZeroPoints, days === 7 ? 1 : days === 30 ? 2 : 3);
+          assert.equal(trend.labels, days === 7 ? 7 : 5);
+          assert.ok(trend.plotHeight >= 140);
+          if (width < 1100) assert.ok(trend.height >= 320);
+          assert.equal(trend.metricsPadding, '18px');
+          assert.equal(trend.divider, '1px');
+          interactions.push({page, width, days, trend});
+          await screenshot(`trend-${days}-days-${width}`);
+          await navigate('sessions');
+          assert.equal(await renderer(() => document.querySelector('.workbench-token-trend') === null), true);
+          await navigate('workbench');
+          const restoredTrend = await renderer(() => ({
+            period: document.querySelector('.workbench-token-trend-head select').value,
+            points: document.querySelectorAll('.workbench-token-trend-point').length,
+            total: document.querySelector('.workbench-token-trend-head b').textContent,
+          }));
+          assert.equal(restoredTrend.period, String(days));
+          assert.equal(restoredTrend.points, days);
+          interactions.push({page, width, days, navigationRestored: restoredTrend});
+        }
       }
       if (['runtimes', 'workflows', 'skills'].includes(page)) {
         const before = await renderer(() => Number(document.querySelector('.pane-resize-handle').getAttribute('aria-valuenow')));
@@ -421,5 +491,5 @@ export async function verifyUiQuality({ evaluate, electron, outputRoot, home }) 
     }
   } finally { await evaluate(`${window}.webContents.setZoomFactor(1); undefined`); }
   await fs.writeFile(path.join(outputRoot, "ui-quality-result.json"), JSON.stringify({ results, zoomResults, otherPages, motion, interactions, settingsFeedback }, null, 2));
-  return { sizes, languages: ['zh', 'en'], screenshotCount: results.length + zoomResults.length + otherPages.length + 20, motion, resultFile: path.join(outputRoot, "ui-quality-result.json") };
+  return { sizes, languages: ['zh', 'en'], screenshotCount: results.length + zoomResults.length + otherPages.length + 29, motion, resultFile: path.join(outputRoot, "ui-quality-result.json") };
 }
