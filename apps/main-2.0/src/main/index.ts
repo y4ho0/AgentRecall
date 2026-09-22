@@ -13,7 +13,6 @@ import {
   shell,
   Tray,
   type IpcMainInvokeEvent,
-  type MenuItemConstructorOptions,
 } from "electron";
 import Store from "electron-store";
 import { existsSync } from "node:fs";
@@ -31,6 +30,7 @@ import { indexMigratedSessionFile, syncDefaultSessionsInBatches, type IndexStatu
 import { createIndexRunCoordinator } from "../core/index-run-coordinator";
 import { createIndexProgressPublisher } from "./index-progress";
 import { createSessionIndexFailureLogger } from "./session-index-failure-log";
+import { installApplicationMenu } from "./application-menu";
 import { SessionIndexFailures } from "../core/session-index-failures";
 import { LocalLiveSessionService } from "./services/local-live-session-service";
 import { createStartupTaskScheduler } from "./startup-tasks";
@@ -236,7 +236,10 @@ import type {
 } from "../core/types";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PRODUCT_NAME = "agent-recall-v2";
+const PRODUCT_NAME = "AgentRecall";
+// Electron's internal name also participates in persistent/native identity.
+// Keep it independent of the visible product name and packaged plist labels.
+const APPLICATION_IDENTITY = "agent-recall-v2";
 const TRAY_ICON_RELATIVE_PATH = path.join("assets", "tray-iconTemplate.png");
 const APP_ICON_RELATIVE_PATH = path.join("assets", "app-icon.png");
 const releaseUpdateRuntime = process.env.AGENT_RECALL_RELEASE_BUILD === "1";
@@ -351,11 +354,11 @@ function ensureAgentRecallMcpClients(): import("../automation/contracts").McpExt
 if (process.env.AGENT_RECALL_USE_MOCK_KEYCHAIN === "1") {
   app.commandLine.appendSwitch("use-mock-keychain");
 }
-app.setName(PRODUCT_NAME);
+app.setName(APPLICATION_IDENTITY);
 app.setAppUserModelId("dev.zszz3.agent-recall-v2");
 bootstrapApplicationPaths({
   app,
-  productName: PRODUCT_NAME,
+  userDataName: APPLICATION_IDENTITY,
   legacyProductNames: [],
 });
 
@@ -1886,77 +1889,6 @@ function resolveAssetPath(relativePath: string): string | null {
   return candidates.find((candidate) => existsSync(candidate)) ?? null;
 }
 
-function createApplicationMenu(): void {
-  if (process.platform !== "darwin") {
-    Menu.setApplicationMenu(null);
-    return;
-  }
-
-  app.setAboutPanelOptions({ applicationName: PRODUCT_NAME });
-
-  const template: MenuItemConstructorOptions[] = [
-    {
-      label: PRODUCT_NAME,
-      submenu: [
-        { label: `About ${PRODUCT_NAME}`, role: "about" },
-        { type: "separator" },
-        {
-          label: "Settings...",
-          accelerator: "Command+,",
-          click: () => {
-            showWindow();
-            mainWindow?.webContents.send("open-settings");
-          },
-        },
-        { type: "separator" },
-        { role: "services" },
-        { type: "separator" },
-        { label: `Hide ${PRODUCT_NAME}`, accelerator: "Command+H", role: "hide" },
-        { label: "Hide Others", accelerator: "Command+Alt+H", role: "hideOthers" },
-        { label: "Show All", role: "unhide" },
-        { type: "separator" },
-        { label: `Quit ${PRODUCT_NAME}`, accelerator: "Command+Q", click: () => app.quit() },
-      ],
-    },
-    {
-      label: "File",
-      submenu: [{ role: "close" }],
-    },
-    {
-      label: "Edit",
-      submenu: [
-        { role: "undo" },
-        { role: "redo" },
-        { type: "separator" },
-        { role: "cut" },
-        { role: "copy" },
-        { role: "paste" },
-        { role: "selectAll" },
-      ],
-    },
-    {
-      label: "View",
-      submenu: [
-        { label: "Refresh Now", accelerator: "CmdOrCtrl+R", click: () => void runIndexSync(true) },
-        { type: "separator" },
-        { role: "reload" },
-        { role: "toggleDevTools" },
-        { type: "separator" },
-        { role: "resetZoom" },
-        { role: "zoomIn" },
-        { role: "zoomOut" },
-        { type: "separator" },
-        { role: "togglefullscreen" },
-      ],
-    },
-    {
-      label: "Window",
-      submenu: [{ role: "minimize" }, { role: "zoom" }, { type: "separator" }, { role: "front" }],
-    },
-  ];
-
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
-}
 
 function emitEnvironmentsUpdated(environments?: SessionEnvironment[]): void {
   if (environments) {
@@ -3243,7 +3175,14 @@ app.whenReady().then(async () => {
   automationService = createAutomationService();
   registerIpc();
   quotaService.start();
-  createApplicationMenu();
+  installApplicationMenu({
+    productName: PRODUCT_NAME,
+    openSettings: () => {
+      showWindow();
+      mainWindow?.webContents.send("open-settings");
+    },
+    refresh: () => void runIndexSync(true),
+  });
   createWindow();
   createTray();
   applyDockVisibility(getSettings().showInDock);
