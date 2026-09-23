@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawn, execFileSync } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
+import { cleanupSmokeProcessGroup, waitForSmokeProcessGroupExit } from "./macos-smoke-processes.mjs";
 import { waitForMacosAppReadiness } from "./macos-native-readiness.mjs";
 
 if (process.platform !== "darwin") throw new Error("Requires macOS.");
@@ -61,14 +62,19 @@ const child = spawn("/usr/bin/sandbox-exec", ["-p", sandbox,
   // Chromium cannot initialize a nested seatbelt sandbox. For this test only,
   // the stricter outer sandbox owns isolation for main/GPU/renderer/children.
   path.join(outputRoot, "agent-recall-v2-local"), "--inspect=127.0.0.1:0", "--no-sandbox"], {
-  env: environment, cwd: testRoot, stdio: ["ignore", "pipe", "pipe"],
+  env: environment, cwd: testRoot, detached: true, stdio: ["ignore", "pipe", "pipe"],
 });
 let output = "";
 let socket;
 let nextId = 0;
 let quitRequested = false;
+let spawnError;
+let postgres;
 const replies = new Map();
-const exited = new Promise((resolve, reject) => { child.once("exit", (code, signal) => resolve({ code, signal })); child.once("error", reject); });
+const exited = new Promise(resolve => {
+  child.once("exit", (code, signal) => resolve({ code, signal }));
+  child.once("error", error => { spawnError = error; resolve({ error }); });
+});
 for (const stream of [child.stdout, child.stderr]) stream.on("data", (chunk) => { output += chunk.toString(); });
 async function evaluate(expression) {
   const id = ++nextId;
@@ -85,6 +91,7 @@ const electron = "process.getBuiltinModule('module').createRequire(process.resou
 try {
   const deadline = Date.now() + 60_000;
   while (!/ws:\/\/127\.0\.0\.1:\d+\/[^\s]+/.test(output)) {
+    if (spawnError) throw spawnError;
     if (child.exitCode !== null || child.signalCode || Date.now() > deadline) throw new Error(`App did not expose inspector: ${output}`);
     await delay(100);
   }
@@ -124,7 +131,6 @@ try {
   const postgresDirectory = path.join(userData, "postgres/data");
   const postgresPidFile = path.join(postgresDirectory, "postmaster.pid");
   const postgresDeadline = Date.now() + 60_000;
-  let postgres;
   while (Date.now() < postgresDeadline) {
     let lines;
     try { lines = (await fs.readFile(postgresPidFile, "utf8")).trim().split("\n"); }
@@ -155,12 +161,13 @@ try {
   socket.close();
   const exit = await Promise.race([exited, delay(20_000, undefined, { ref: false }).then(() => { throw new Error("Graceful shutdown timed out"); })]);
   assert.equal(exit.code, 0);
+  assert.ok(await waitForSmokeProcessGroupExit(child.pid), "Owned renderer/GPU/utility helpers survived ordinary quit");
   // Graceful shutdown must stop the temporary server, not just close the UI.
   await assert.rejects(fs.access(postgresPidFile), { code: "ENOENT" });
   assert.throws(() => process.kill(postgres.pid, 0), { code: "ESRCH" });
-  await fs.writeFile(path.join(outputRoot, "smoke-result.json"), JSON.stringify({ ...report, exit, postgresStopped: true }, null, 2));
+  await fs.writeFile(path.join(outputRoot, "smoke-result.json"), JSON.stringify({ ...report, exit, postgresStopped: true, processGroupStopped: true }, null, 2));
   await fs.rm(path.join(outputRoot, "smoke-error.log"), { force: true });
-  console.log(JSON.stringify({ ...report, exit, postgresStopped: true }, null, 2));
+  console.log(JSON.stringify({ ...report, exit, postgresStopped: true, processGroupStopped: true }, null, 2));
 } catch (error) {
   await fs.writeFile(path.join(outputRoot, "smoke-error.log"), output);
   console.error(output);
@@ -170,15 +177,30 @@ try {
     if (!quitRequested) await evaluate(`${electron}.app.quit(); undefined`).catch(() => undefined);
     socket.close();
   }
-  if (child.exitCode === null && !child.signalCode) child.kill("SIGTERM");
-  await Promise.race([exited, delay(3000, undefined, { ref: false })]);
-  if (child.exitCode === null && !child.signalCode) child.kill("SIGKILL");
-  await exited;
-  // Keep failed smoke data for diagnosis if a database still owns its lock.
-  const live = await fs.access(path.join(userData, "postgres/data/postmaster.pid")).then(() => true, () => false);
-  if (live) {
-    execFileSync(path.join(appPath, `Contents/Resources/app/node_modules/@embedded-postgres/darwin-${process.arch}/native/bin/pg_ctl`),
-      ["-D", path.join(userData, "postgres/data"), "-m", "fast", "-w", "stop"], { env: environment, timeout: 20_000 });
-  }
+  const cleanupErrors = [];
+  // Even after the main process exits, renderer/GPU/utility descendants remain
+  // owned by this detached group. Never delete fixtures before confirming exit.
+  try { if (child.pid) await cleanupSmokeProcessGroup(child.pid); }
+  catch (error) { cleanupErrors.push(error); }
+  try {
+    const postgresDirectory = path.join(userData, "postgres/data");
+    const pidFile = path.join(postgresDirectory, "postmaster.pid");
+    let lines;
+    try { lines = (await fs.readFile(pidFile, "utf8")).trim().split("\n"); }
+    catch (error) { if (error.code !== "ENOENT") throw error; }
+    // PostgreSQL can start a separate session; stop it via its owned data dir.
+    if (lines) {
+      const pid = Number(lines[0]);
+      assert.ok(Number.isSafeInteger(pid) && pid > 1, "Invalid fixture PostgreSQL PID");
+      assert.ok([postgresDirectory, await fs.realpath(postgresDirectory)].includes(lines[1]), "Unexpected PostgreSQL data directory");
+      execFileSync("/usr/bin/sandbox-exec", ["-p", sandbox,
+        path.join(appPath, `Contents/Resources/app/node_modules/@embedded-postgres/darwin-${process.arch}/native/bin/pg_ctl`),
+        "-D", postgresDirectory, "-m", "fast", "-w", "stop"], { env: environment, cwd: testRoot, timeout: 20_000, stdio: "pipe" });
+      await assert.rejects(fs.access(pidFile), { code: "ENOENT" });
+      assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
+    }
+    if (postgres) assert.throws(() => process.kill(postgres.pid, 0), { code: "ESRCH" });
+  } catch (error) { cleanupErrors.push(error); }
+  if (cleanupErrors.length) throw new AggregateError(cleanupErrors, `Smoke cleanup unconfirmed; fixtures retained at ${testRoot}`);
   await fs.rm(testRoot, { recursive: true, force: true });
 }
