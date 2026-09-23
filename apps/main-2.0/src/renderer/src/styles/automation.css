@@ -2455,8 +2455,23 @@
 
 /* Resizable MCP panels follow their available width, including interface zoom. */
 .mcp-workbench .workbench-layout.resizable-split { display: grid; }
-.mcp-workbench .resizable-split > .workbench-browser { max-height: none; }
-.mcp-workbench .resizable-split .workbench-browser-list { display: block; min-width: 0; }
+.mcp-workbench .resizable-split > .workbench-browser {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: none;
+}
+.mcp-workbench .resizable-split .workbench-browser-header { flex-shrink: 0; }
+/* The list owns scrolling within the space left below the header, including
+   when the upstream narrow-viewport rules switch its height to auto. */
+.mcp-workbench .resizable-split .workbench-browser-list {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  overflow: auto;
+}
 .mcp-workbench .resizable-split .workbench-browser-item { min-width: 0; }
 .mcp-workbench .resizable-split[data-stacked="true"] > .workbench-browser {
   border-right: 0;
