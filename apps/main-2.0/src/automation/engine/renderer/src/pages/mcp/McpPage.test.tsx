@@ -118,3 +118,9 @@ describe("McpPage", () => {
     expect(html).toContain("禁用");
   });
 });
+
+it("exposes an accessible resize separator for the MCP source list", () => {
+  const html = renderToStaticMarkup(<McpPage language="en" />);
+  expect(html).toContain('aria-label="Resize MCP list"');
+  expect(html).toContain('role="separator"');
+});

@@ -2452,3 +2452,13 @@
 .workflow-core-toolbar-actions > button { white-space: nowrap; flex-shrink: 0; }
 .automation-page .app-page-head > div:first-child { min-width: 0; flex: 1; }
 .automation-page .app-page-head > button { flex-shrink: 0; }
+
+/* Resizable MCP panels follow their available width, including interface zoom. */
+.mcp-workbench .workbench-layout.resizable-split { display: grid; }
+.mcp-workbench .resizable-split > .workbench-browser { max-height: none; }
+.mcp-workbench .resizable-split .workbench-browser-list { display: block; min-width: 0; }
+.mcp-workbench .resizable-split .workbench-browser-item { min-width: 0; }
+.mcp-workbench .resizable-split[data-stacked="true"] > .workbench-browser {
+  border-right: 0;
+  border-bottom: 1px solid var(--border-subtle);
+}

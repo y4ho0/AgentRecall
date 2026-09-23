@@ -12,6 +12,9 @@ describe("SessionsPage search tools", () => {
 
   beforeEach(() => {
     Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", true);
+    const values = new Map<string, string>();
+    vi.stubGlobal("localStorage", { getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value) });
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
@@ -22,6 +25,18 @@ describe("SessionsPage search tools", () => {
     await act(async () => root.unmount());
     container.remove();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("resizes the session sidebar and persists its independent width", async () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1000);
+    await act(async () => root.render(<SessionsPage model={createModel()} actions={createActions()} />));
+    const handle = container.querySelector<HTMLElement>('[role="separator"][aria-label="Resize session sidebar"]')!;
+    expect(handle).not.toBeNull();
+    const before = Number(handle.getAttribute("aria-valuenow"));
+    await act(async () => { handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })); });
+    expect(Number(handle.getAttribute("aria-valuenow"))).toBe(before + 16);
+    expect(localStorage.getItem("agent-recall-sessions-pane")).toBe(String(before + 16));
   });
 
   it("updates disclosure accessibility immediately and preserves child filters while animating", async () => {

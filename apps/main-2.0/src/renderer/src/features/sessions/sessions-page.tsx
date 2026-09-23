@@ -52,6 +52,7 @@ import {
   getLiveSessionState,
   type LiveStatusFilter,
 } from "../../live-filter";
+import { ResizableSplit } from "../../components/resizable-split";
 import type { SidebarSectionId, SidebarSectionsState } from "../../sidebar-sections";
 import type { LanguageMode } from "../../language";
 import { environmentTarget } from "../environments/environment-display";
@@ -328,6 +329,8 @@ export function SessionsPage({
         </button>
       </header>
 
+      <ResizableSplit className="sessions-layout" storageKey="agent-recall-sessions-pane" initialWidth={240}
+        minWidth={200} maxWidth={440} label={l("Resize session sidebar", "调整会话侧栏宽度")}>
       <SessionSidebar model={model} actions={actions} l={l} />
 
       <section className="content">
@@ -672,6 +675,7 @@ export function SessionsPage({
           </nav>
         ) : null}
       </section>
+      </ResizableSplit>
     </div>
   );
 }

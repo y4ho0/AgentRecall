@@ -154,6 +154,7 @@ export function McpPage({ language = "en" }: { language?: Language }) {
       ) : null}
       <div className="mcp-workbench-body">
         <WorkbenchLayout
+          browserResize={{ storageKey: "agent-recall-mcp-pane", label: zh ? "调整 MCP 列表宽度" : "Resize MCP list" }}
           browser={
             <>
               <BrowserHeader

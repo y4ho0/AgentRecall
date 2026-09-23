@@ -83,7 +83,7 @@
 
 .team-chat-layout {
   display: grid;
-  grid-template-columns: 208px minmax(0, 1fr) 184px;
+  grid-template-columns: minmax(0, 1fr) 184px;
   min-height: 0;
   border-top: 1px solid var(--border-subtle);
 }
@@ -1162,15 +1162,16 @@
 @keyframes team-chat-pulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
 
 @media (max-width: 980px) {
-  .team-chat-layout { grid-template-columns: 190px minmax(0, 1fr); }
+  .team-chat-layout { grid-template-columns: minmax(0, 1fr); }
   .team-chat-members { display: none; }
 }
 
+.team-chat-main[data-stacked="true"] .team-chat-room-rail { border-right: 0; border-bottom: 1px solid var(--border-subtle); }
+.team-chat-main[data-stacked="true"] .team-chat-room-list { display: flex; overflow-x: auto; overflow-y: hidden; }
+.team-chat-main[data-stacked="true"] .team-chat-room-item { flex: 0 0 150px; }
+
 @media (max-width: 720px) {
   .team-chat-layout { grid-template-columns: minmax(0, 1fr); }
-  .team-chat-room-rail { max-height: 150px; border-right: 0; border-bottom: 1px solid var(--border-subtle); }
-  .team-chat-room-list { display: flex; overflow-x: auto; overflow-y: hidden; }
-  .team-chat-room-item { flex: 0 0 150px; }
   .team-chat-room-delete { width: 34px; height: 34px; opacity: 1; }
   .team-chat-page-head p { display: block; }
   .team-chat-connection-chip { max-width: 180px; }
