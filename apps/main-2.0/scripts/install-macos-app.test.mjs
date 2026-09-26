@@ -20,8 +20,8 @@ async function makeTempDir(prefix) {
   return dir;
 }
 
-async function makeFakePackage() {
-  const packagePath = await makeTempDir("agent-recall-app-pkg-");
+async function makeFakePackage(directoryName = "") {
+  const packagePath = path.join(await makeTempDir("agent-recall-app-pkg-"), directoryName);
   fs.mkdirSync(path.join(packagePath, "bin"), { recursive: true });
   fs.mkdirSync(path.join(packagePath, "assets"), { recursive: true });
   fs.writeFileSync(path.join(packagePath, "package.json"), JSON.stringify({ name: "agent-recall-v2", version: "1.2.3" }));
@@ -167,6 +167,34 @@ test("uninstallMacosApp keeps bundles owned by another install", async () => {
   assert.equal(uninstallMacosApp({ homeDir }).status, "removed");
 });
 
+for (const directoryName of ["package with spaces $`", ...(process.platform === "win32" ? [] : ['package"\\'])]) {
+  for (const legacy of [false, true]) {
+    test(`uninstallMacosApp recognizes ${legacy ? "legacy" : "escaped"} paths: ${JSON.stringify(directoryName)}`, async () => {
+      const packagePath = await makeFakePackage(directoryName);
+      const appsDir = await makeTempDir("agent-recall-app-owned-");
+      const installed = installMacosApp({
+        platform: "darwin", packagePath, nodePath: "/fake/node", applicationsDirs: [appsDir], buildIcns: fakeBuildIcns,
+      });
+      assert.equal(installed.status, "installed");
+      if (legacy) {
+        // Older bundles embedded the CLI path directly in the fallback body.
+        const cliPath = path.join(packagePath, "bin", "agent-recall.cjs");
+        fs.writeFileSync(path.join(installed.appPath, "Contents", "MacOS", "AgentRecall"),
+          `#!/bin/zsh\nif [ -x "/fake/node" ] && [ -f "${cliPath}" ]; then\n  exec "/fake/node" "${cliPath}"\nfi\n`);
+      }
+      // On POSIX these are distinct install paths whose raw and shell-escaped
+      // spellings can collide. Never match both spellings indiscriminately.
+      const otherPackagePath = process.platform === "win32"
+        ? `${packagePath}-other`
+        : packagePath.replace(/[\\"$`]/g, "\\$&");
+      assert.equal(uninstallMacosApp({ applicationsDirs: [appsDir], packagePath: otherPackagePath }).status, "kept");
+      assert.equal(fs.existsSync(installed.appPath), true);
+      assert.equal(uninstallMacosApp({ applicationsDirs: [appsDir], packagePath }).status, "removed");
+      assert.equal(fs.existsSync(installed.appPath), false);
+    });
+  }
+}
+
 test("launcher prefers the current install over stale baked paths", { skip: process.platform !== "darwin" }, async () => {
   const { spawnSync } = await import("node:child_process");
   const packagePath = await makeFakePackage();
@@ -224,7 +252,7 @@ test("launcher uses its baked install when the Node manager is configured only i
   const homeDir = await makeTempDir("agent-recall-launch-zshrc-");
   const binDir = path.join(homeDir, "node manager", "bin");
   const appsDir = path.join(homeDir, "Applications");
-  const packagePath = await makeFakePackage();
+  const packagePath = await makeFakePackage('package with spaces $`"\\');
   fs.mkdirSync(binDir, { recursive: true });
   fs.mkdirSync(appsDir);
   const nodePath = path.join(binDir, "node");
